@@ -128,8 +128,11 @@ class BhashaSetuUnifiedPipeline:
         total_ms = round((time.time() - start_time) * 1000, 2)
         pipeline_timings["total_pipeline_ms"] = total_ms
 
+        pipeline_status = "AUTO_PUBLISHED" if quality_res["decision"] == "AUTO_PUBLISH_CANDIDATE" else "PENDING_EDUCATOR_REVIEW"
+
         return {
             "status": "SUCCESS",
+            "pipeline_status": pipeline_status,
             "lesson_id": lesson_id,
             "learning_outcome_code": top_lo_code,
             "target_language": resolved_lang,
@@ -143,6 +146,13 @@ class BhashaSetuUnifiedPipeline:
             "audio_metadata": audio_metadata,
             "worksheet": worksheet,
             "flashcards": flashcards,
+            "multilingual_bundle": {
+                "script": translation_res["script_type"],
+                "text": translation_res["native_script_text"],
+                "translit_hi": translation_res["transliteration_hindi"],
+                "translit_lat": translation_res["transliteration_latin"]
+            },
+            "offline_distribution_package": signed_pack,
             "offline_pack": signed_pack,
             "pipeline_timings": pipeline_timings
         }

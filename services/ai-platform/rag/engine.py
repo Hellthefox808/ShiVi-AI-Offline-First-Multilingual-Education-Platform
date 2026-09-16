@@ -554,7 +554,10 @@ class FineTunedHybridRagEngine:
 
             bm25_score = self._compute_bm25_score(query_tokens, idx)
             cos_sim = self._cosine_similarity(query_vector, self.doc_embeddings[idx])
-            rrf_score = (1.0 / (60.0 + max(0.0, 10.0 - bm25_score))) + (cos_sim * 0.6)
+            
+            # Direct learning outcome or chapter match boost
+            lo_boost = 0.25 if doc["lo_code"].lower() in query.lower() else 0.0
+            rrf_score = (1.0 / (60.0 + max(0.0, 10.0 - bm25_score))) + (cos_sim * 0.6) + lo_boost
             
             rerank_score = self._cross_encoder_rerank(query, doc, rrf_score)
             

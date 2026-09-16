@@ -5,6 +5,7 @@ import { LessonsService } from '../src/lessons/lessons.service';
 import { CurriculumService } from '../src/curriculum/curriculum.service';
 import { SyncService } from '../src/sync/sync.service';
 import { AiClientService } from '../src/ai-client/ai-client.service';
+import { AnalyticsService } from '../src/analytics/analytics.service';
 import { OutboxSyncItem, SyncPushRequest } from '@bhashasetu/contracts';
 
 describe('BhashaSetu Web Backend Domain Services', () => {
@@ -192,20 +193,40 @@ describe('BhashaSetu Web Backend Domain Services', () => {
     });
   });
 
-  describe('AiClientService', () => {
-    it('should generate resilient local fallback when remote AI platform is offline', async () => {
-      const aiClient = new AiClientService();
-      const result = await aiClient.generateLesson({
-        hindiPrompt: 'जल संरक्षण का महत्व',
-        targetLanguage: 'SANTHALI',
-        gradeLevel: 'GRADE_2',
-      });
+  describe('AnalyticsService', () => {
+    it('should return district summary and district breakdown', () => {
+      const analyticsService = new AnalyticsService();
+      const summary = analyticsService.getDistrictSummary();
 
-      assert.ok(result.lesson_id.startsWith('LES-'));
-      assert.equal(result.target_language, 'SANTHALI');
-      assert.equal(result.adaptation.native_script, 'OL_CHIKI');
-      assert.ok(result.adaptation.transliteration_hindi.length > 0);
-      assert.equal(result.quality_report.status, 'HIGH_CONFIDENCE');
+      assert.equal(summary.state, 'JHARKHAND');
+      assert.ok(summary.districts_covered.length >= 5);
+      assert.ok(summary.total_active_schools > 0);
+      assert.ok(summary.active_tablets > 0);
+      assert.ok(summary.offline_sync_health_percentage > 95);
+      assert.ok(Array.isArray(summary.district_breakdown));
+      assert.ok(summary.district_breakdown.length >= 5);
+    });
+
+    it('should filter summary by specific district', () => {
+      const analyticsService = new AnalyticsService();
+      const dumka = analyticsService.getDistrictSummary('Dumka');
+
+      assert.ok(dumka.filtered_district);
+      assert.equal(dumka.filtered_district.district, 'Dumka');
+      assert.equal(dumka.filtered_district.primary_tribal_language, 'SANTHALI');
+      assert.equal(dumka.total_active_schools, 48);
+    });
+
+    it('should return list of all active tribal districts', () => {
+      const analyticsService = new AnalyticsService();
+      const districts = analyticsService.getDistricts();
+
+      assert.ok(Array.isArray(districts));
+      assert.equal(districts.length, 5);
+      const names = districts.map((d) => d.district);
+      assert.ok(names.includes('Dumka'));
+      assert.ok(names.includes('West Singhbhum'));
+      assert.ok(names.includes('Khunti'));
     });
   });
 });

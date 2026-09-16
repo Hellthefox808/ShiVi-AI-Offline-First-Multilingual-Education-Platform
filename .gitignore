@@ -76,3 +76,4 @@ Thumbs.db
 logs/
 *.tmp
 *.bak
+temp_*/

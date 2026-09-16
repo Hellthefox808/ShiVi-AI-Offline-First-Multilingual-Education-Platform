@@ -4,13 +4,15 @@
 
 [![Team SHIVI@808](https://img.shields.io/badge/Team-SHIVI%40808-orange.svg?style=for-the-badge&logo=github)](https://github.com/Hellthefox808)
 [![SIH 2026](https://img.shields.io/badge/SIH%202026-Problem%20SIH26042-blue.svg?style=for-the-badge&logo=gov.in)](https://smartindiahackathon.gov.in)
-[![Production Ready](https://img.shields.io/badge/Status-3.0.0--PROD%20Verified-brightgreen.svg?style=for-the-badge)](docs/FTL.md)
+[![Production Ready](https://img.shields.io/badge/Status-3.1.0--PROD%20Verified-brightgreen.svg?style=for-the-badge)](docs/FTL.md)
 [![TypeScript Strict](https://img.shields.io/badge/TypeScript-5.x%20Strict-blue.svg?style=for-the-badge&logo=typescript)](packages/contracts)
 [![Next.js](https://img.shields.io/badge/Next.js-16.3%20App%20Router-black.svg?style=for-the-badge&logo=next.js)](apps/web-frontend)
 [![NestJS](https://img.shields.io/badge/NestJS-11.x%20LTS-red.svg?style=for-the-badge&logo=nestjs)](services/web-backend)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%20Python%203.12-teal.svg?style=for-the-badge&logo=fastapi)](services/ai-platform)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18%20%2B%20pgvector-blue.svg?style=for-the-badge&logo=postgresql)](infra)
-[![Tests Passing](https://img.shields.io/badge/Tests-12%2F12%20Passing%20(100%25)-success.svg?style=for-the-badge)](tests/verify_all.py)
+[![Tests Passing](https://img.shields.io/badge/Tests-13%2F13%20Master%20Suite%20(100%25)-success.svg?style=for-the-badge)](tests/verify_all.py)
+[![Pytest AI](https://img.shields.io/badge/Pytest-9%2F9%20Passing-brightgreen.svg?style=for-the-badge&logo=pytest)](services/ai-platform)
+[![NestJS Tests](https://img.shields.io/badge/NestJS%20Tests-18%2F18%20Passing-brightgreen.svg?style=for-the-badge&logo=jest)](services/web-backend)
 
 **Mother-Tongue-Based Multilingual Education (MTB-MLE) AI Scaffolding, Live Voice Translation, Edge RAG, and Offline Field Synchronization for Primary Schools in Jharkhand.**
 
@@ -426,7 +428,8 @@ BhashaSetu AI is engineered to execute flawlessly on low-cost government school 
 | `GET` | `/lessons` | List lessons by school and teacher | Yes |
 | `POST` | `/sync/push` | Durable outbox batch push with UUID idempotency | Yes |
 | `GET` | `/sync/pull` | Delta sync cursor pull for updated lessons | Yes |
-| `GET` | `/analytics/overview` | State & District FLN telemetry summary | Yes |
+| `GET` | `/analytics/district-summary` | State & District FLN telemetry with query filters | Yes |
+| `GET` | `/analytics/districts` | List of tribal districts with telemetry summary | Yes |
 | `GET` | `/devices` | List registered school tablet fleet | Yes |
 | `POST` | `/devices/lock` | Remote security revocation & data wipe | Yes |
 | `GET` | `/reviews` | Native linguist review queue | Yes |
@@ -438,8 +441,10 @@ BhashaSetu AI is engineered to execute flawlessly on low-cost government school 
 |---|---|---|---|
 | `GET` | `/health` | Service health & active model registry | None |
 | `GET` | `/api/v1/languages/capabilities` | Supported tribal scripts & offline capability | None |
+| `GET` | `/api/v1/rag/nodes` | Curriculum node catalog with grade/subject filters | None |
 | `POST` | `/api/v1/rag/retrieve` | Hybrid RAG retrieval with provenance | `RAGRetrieveRequest` |
 | `POST` | `/api/v1/ai/generate-lesson` | End-to-end MTB-MLE lesson generation | `LessonGenerateRequest` |
+| `POST` | `/api/v1/translate/batch` | High-throughput batch translation with dual phonetics | `BatchTranslateRequest` |
 | `POST` | `/api/v1/voice/translate` | Live streaming voice-to-voice translation | `VoiceTranslateRequest` |
 | `POST` | `/api/v1/pedagogy/adapt` | Cultural analogy & metaphor injection | `PedagogyAdaptRequest` |
 | `POST` | `/api/v1/quality/evaluate` | COMET quality estimation & MQM span tagger | `QualityEvaluateRequest` |

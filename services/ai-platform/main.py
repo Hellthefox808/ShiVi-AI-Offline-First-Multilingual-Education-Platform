@@ -76,13 +76,17 @@ class PipelineSynthesizeRequest(BaseModel):
     subject: str = Field(default="ENVIRONMENTAL_STUDIES", example="ENVIRONMENTAL_STUDIES")
     district: Optional[str] = Field(default="Dumka", example="Dumka")
 
+class BatchTranslateRequest(BaseModel):
+    prompts: List[str] = Field(..., example=["नमस्ते", "पानी", "पेड़"])
+    target_language: str = Field(default="SANTHALI", example="SANTHALI")
+
 # --- API Endpoints ---
 @app.get("/health")
 def health_check():
     return {
         "status": "HEALTHY",
         "service": "BhashaSetu AI Platform",
-        "version": "3.0.0-PROD",
+        "version": "3.1.0-PROD",
         "supported_languages": ["SANTHALI", "HO", "MUNDARI"],
         "scripts": ["OL_CHIKI", "WARANG_CHITI", "DEVANAGARI"],
         "rag_index_status": "READY",
@@ -98,6 +102,48 @@ def health_check():
 @app.get("/api/v1/languages/capabilities")
 def get_language_capabilities():
     return language_provider.get_capabilities()
+
+@app.post("/api/v1/translate/batch")
+def batch_translate(req: BatchTranslateRequest):
+    resolved_lang = language_provider.resolve_language(req.target_language)
+    translations = []
+    for prompt in req.prompts:
+        res = language_provider.translate_concept(prompt, resolved_lang)
+        translations.append({
+            "original": prompt,
+            "translated": res["native_script_text"],
+            "script": res["script_type"],
+            "transliteration_hi": res["transliteration_hindi"],
+            "transliteration_lat": res["transliteration_latin"]
+        })
+    return {
+        "target_language": resolved_lang,
+        "count": len(translations),
+        "translations": translations
+    }
+
+@app.get("/api/v1/rag/nodes")
+def get_rag_nodes(grade: Optional[str] = None, subject: Optional[str] = None):
+    nodes = JCERT_KNOWLEDGE_BASE
+    if grade:
+        nodes = [n for n in nodes if n.get("grade") == grade]
+    if subject:
+        nodes = [n for n in nodes if n.get("subject") == subject]
+    return {
+        "count": len(nodes),
+        "nodes": [
+            {
+                "chunk_id": n["chunk_id"],
+                "grade": n["grade"],
+                "subject": n["subject"],
+                "chapter_title": n["chapter_title"],
+                "lo_code": n["lo_code"],
+                "bloom_level": n["bloom_level"],
+                "cultural_keywords": n["cultural_keywords"]
+            }
+            for n in nodes
+        ]
+    }
 
 @app.post("/api/v1/rag/retrieve")
 def retrieve_curriculum(req: RAGRetrieveRequest):
