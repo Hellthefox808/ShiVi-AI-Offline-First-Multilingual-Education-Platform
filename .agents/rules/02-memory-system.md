@@ -50,8 +50,9 @@ All durable memory items stored in `.agents/memory/` must comply with this schem
 
 ## 3. Salience Filter & Contradiction Resolution
 
-```
+```text
 INPUT -> FACT EXTRACTION -> SALIENCE TEST
+
   ├── HIGH   -> Contradiction Check -> Write / Version (Temporal KG)
   ├── MEDIUM -> Episodic Archive
   └── LOW    -> Discard (Conversational noise, greetings, transient steps)

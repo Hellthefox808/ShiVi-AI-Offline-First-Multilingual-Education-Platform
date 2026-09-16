@@ -1,8 +1,8 @@
 {
-  "$schema": "https://antigravity.google/schemas/temporal-memory-graph.json",
   "version": "1.0.0",
   "project": "bhashasetu-ai",
-  "updated_at": "2026-09-16T10:55:00Z",
+  "updated_at": "2026-09-16T11:24:00Z",
+
   "entities": [
     {
       "id": "ent_arch_acoustic_relay",
@@ -83,6 +83,25 @@
       "tags": ["rag", "jcert", "bge-m3", "bm25", "hybrid-search"],
       "supersedes": null,
       "superseded_by": null
+    },
+    {
+      "id": "ent_live_e2e_verification",
+      "type": "test_verification",
+      "name": "Live Multi-Service End-to-End Integration Verification",
+      "content": "Automated live integration suite tests real network TCP socket calls across AI Platform (port 8000) and Web Backend (port 3001). Verifies RAG retrieval, Santhali/Ho/Mundari lesson scaffolding via remote HTTP, teacher HITL review lifecycle, idempotent outbox push with replay deduplication, and delta sync pull.",
+      "source": {
+        "type": "test_suite",
+        "path": "tests/test_live_e2e.py"
+      },
+      "created_at": "2026-09-16T11:20:00Z",
+      "valid_at": "2026-09-16T11:20:00Z",
+      "invalid_at": null,
+      "confidence": 1.0,
+      "verification": "VERIFIED",
+      "importance": 0.99,
+      "tags": ["e2e", "integration", "microservices", "outbox", "http", "idempotency"],
+      "supersedes": null,
+      "superseded_by": null
     }
   ],
   "relations": [
@@ -97,6 +116,12 @@
       "relation": "PROVIDES_CONTEXT_TO",
       "target_id": "ent_arch_acoustic_relay",
       "valid_at": "2026-08-20T00:00:00Z"
+    },
+    {
+      "source_id": "ent_live_e2e_verification",
+      "relation": "VALIDATES_INTEGRATION_OF",
+      "target_id": "ent_arch_durable_outbox",
+      "valid_at": "2026-09-16T11:20:00Z"
     }
   ]
 }

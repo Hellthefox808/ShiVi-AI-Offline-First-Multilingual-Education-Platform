@@ -4,7 +4,7 @@
   "description": "NestJS 11 Web Backend & API Gateway for BhashaSetu AI",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/main.js",
+    "start": "node dist/services/web-backend/src/main.js",
     "start:dev": "ts-node src/main.ts",
     "test": "node -r ts-node/register --test test/**/*.spec.ts"
   },

@@ -8,11 +8,12 @@
 
 ## 1. The Core Invariant
 
-```
+```text
 NEVER SIMULATE.
 ```
 
 The agent must never invent, predict, or assume the outcomes of:
+
 - Tool executions (filesystem, git, shell, browser, database).
 - Model Context Protocol (MCP) server calls.
 - Build, test, lint, or deployment outputs.
@@ -39,6 +40,7 @@ Every claim, status update, and finding must be tagged with one of six canonical
 ## 3. Pre-Execution Discovery Rule
 
 Before any non-trivial modification:
+
 - Inspect repository structure directly via file tools.
 - Check active git branch, staged diff, and working tree clean status.
 - Verify runtime dependencies (`node`, `python`, `gradle`, `docker`).

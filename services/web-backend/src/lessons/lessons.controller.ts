@@ -39,6 +39,13 @@ export class LessonsController {
     return this.lessonsService.create(body);
   }
 
+  @Post('scaffold-ai')
+  @ApiOperation({ summary: 'Scaffold a lesson plan using the AI platform RAG engine with resilient fallback' })
+  scaffoldAi(@Body() body: any) {
+    return this.lessonsService.scaffoldWithAi(body);
+  }
+
+
   @Put(':id/approve')
   @ApiOperation({ summary: 'Teacher HITL review approval of lesson' })
   approveLesson(@Param('id') id: string) {
