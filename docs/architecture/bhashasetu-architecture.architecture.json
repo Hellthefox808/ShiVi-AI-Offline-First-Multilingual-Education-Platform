@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "BhashaSetu AI System Architecture",
+    "output": "bhashasetu-architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [1160, 680],
+    "views": [
+      {
+        "id": "offline-edge-sync",
+        "label": "Offline-First Edge Sync",
+        "focus": ["edge_tablet", "gateway", "redis_queue", "postgres_db"],
+        "note": "Follow durable outbox push and delta synchronization from disconnected Android tablets."
+      },
+      {
+        "id": "bilingual-scaffold",
+        "label": "Bilingual MTB-MLE Scaffolding",
+        "focus": ["web_portal", "gateway", "ai_platform", "rag_engine", "jcert_db"],
+        "note": "Teacher lesson scaffolding queries the Hybrid RAG engine with authentic tribal cultural analogies."
+      },
+      {
+        "id": "phonetic-tts",
+        "label": "Phonetic Voice Synthesis",
+        "focus": ["edge_tablet", "ai_platform", "tts_relay"],
+        "note": "Real-time tribal voice translation for Santhali Ol Chiki, Ho Warang Chiti, and Mundari."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "edge_tablet",
+      "type": "frontend",
+      "label": "Android Edge Tablet",
+      "sublabel": "Compose + Room (Offline)",
+      "tag": "0-Net Durability",
+      "pos": [40, 220],
+      "size": [170, 75]
+    },
+    {
+      "id": "web_portal",
+      "type": "frontend",
+      "label": "Next.js Web Studio",
+      "sublabel": "Teacher Portal (:3002)",
+      "tag": "React 19 + Tailwind",
+      "pos": [40, 420],
+      "size": [170, 75]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "NestJS API Gateway",
+      "sublabel": "Enterprise Core (:3001)",
+      "tag": "SLA < 3s",
+      "pos": [310, 320],
+      "size": [170, 75]
+    },
+    {
+      "id": "redis_queue",
+      "type": "messagebus",
+      "label": "Redis & BullMQ",
+      "sublabel": "Sync Queues (:6379)",
+      "brand": "redis",
+      "tag": "Idempotent Sync",
+      "pos": [310, 140],
+      "size": [170, 75]
+    },
+    {
+      "id": "postgres_db",
+      "type": "database",
+      "label": "PostgreSQL + pgvector",
+      "sublabel": "Relational Store (:5432)",
+      "brand": "postgresql",
+      "tag": "ACID Outbox Store",
+      "pos": [310, 500],
+      "size": [170, 75]
+    },
+    {
+      "id": "ai_platform",
+      "type": "backend",
+      "label": "FastAPI AI Engine",
+      "sublabel": "Python 3.12 Core (:8000)",
+      "brand": "python",
+      "tag": "Hybrid Inference",
+      "pos": [590, 320],
+      "size": [170, 75]
+    },
+    {
+      "id": "rag_engine",
+      "type": "backend",
+      "label": "Hybrid RAG Engine",
+      "sublabel": "BM25 + Dense Vectors",
+      "tag": "100% Recall@1",
+      "pos": [870, 190],
+      "size": [170, 75]
+    },
+    {
+      "id": "jcert_db",
+      "type": "database",
+      "label": "JCERT Curriculum Store",
+      "sublabel": "Primary Grades 1-5",
+      "tag": "15 Micro-Nodes",
+      "pos": [870, 340],
+      "size": [170, 75]
+    },
+    {
+      "id": "tts_relay",
+      "type": "external",
+      "label": "Phonetic Acoustic TTS",
+      "sublabel": "Devanagari Relay Engine",
+      "tag": "Ol Chiki & Warang Chiti",
+      "pos": [870, 490],
+      "size": [170, 75]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Classroom Edge (Offline Mesh)",
+      "wraps": ["edge_tablet"]
+    },
+    {
+      "kind": "region",
+      "label": "State Hub Services (Cloud / On-Prem)",
+      "wraps": ["gateway", "redis_queue", "postgres_db", "ai_platform", "rag_engine", "jcert_db", "tts_relay"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "edge-to-gateway",
+      "from": "edge_tablet",
+      "to": "gateway",
+      "label": "durable outbox sync",
+      "variant": "emphasis"
+    },
+    {
+      "id": "web-to-gateway",
+      "from": "web_portal",
+      "to": "gateway",
+      "label": "REST / API client"
+    },
+    {
+      "id": "gateway-to-redis",
+      "from": "gateway",
+      "to": "redis_queue",
+      "label": "queue jobs",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "gateway-to-postgres",
+      "from": "gateway",
+      "to": "postgres_db",
+      "label": "ACID outbox log",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    },
+    {
+      "id": "gateway-to-ai",
+      "from": "gateway",
+      "to": "ai_platform",
+      "label": "AiClientService HTTP",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ai-to-rag",
+      "from": "ai_platform",
+      "to": "rag_engine",
+      "label": "retrieve context",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "rag-to-jcert",
+      "from": "rag_engine",
+      "to": "jcert_db",
+      "label": "curriculum graph",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    },
+    {
+      "id": "ai-to-tts",
+      "from": "ai_platform",
+      "to": "tts_relay",
+      "label": "phonetic synthesis",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Offline-First Durability",
+      "items": [
+        "Android edge tablets run completely disconnected with Room DB",
+        "Append-only outbox sync with guaranteed UUID idempotency"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Pedagogy & Hybrid RAG",
+      "items": [
+        "Sub-3s end-to-end SLA for classroom interactions",
+        "100% Recall@1 on JCERT Grades 1-5 multilingual curriculum"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Tribal Phonetics",
+      "items": [
+        "Acoustic phonetic relay for Ol Chiki (Santhali) & Warang Chiti (Ho)",
+        "Bilingual relay mode with 450ms pedagogical cadence"
+      ]
+    }
+  ]
+}

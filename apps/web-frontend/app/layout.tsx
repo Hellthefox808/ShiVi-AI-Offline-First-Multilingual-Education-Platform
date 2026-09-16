@@ -1,7 +1,7 @@
 import React from 'react';
 import './globals.css';
 import { Plus_Jakarta_Sans, Outfit } from 'next/font/google';
-import { Sparkles, BookOpen, Zap } from 'lucide-react';
+import { Sparkles, BookOpen, Zap, Network } from 'lucide-react';
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -68,6 +68,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Zap className="w-3.5 h-3.5 text-amber-400" />
                 <span>Sub-3s SLA Compliant</span>
               </div>
+              <a
+                href="/architecture.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-950/70 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/80 hover:border-indigo-400/60 transition-all cursor-pointer shadow-sm"
+                title="Open Interactive Archify Diagram"
+              >
+                <Network className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Architecture Map</span>
+              </a>
             </div>
           </div>
         </header>
