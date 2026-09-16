@@ -43,6 +43,7 @@ CLAUDE.md
 !.agents/memory/
 !.agents/skills/
 !.agents/rules/
+!.agents/mcp/
 .gemini/
 .system_generated/
 .codelens/

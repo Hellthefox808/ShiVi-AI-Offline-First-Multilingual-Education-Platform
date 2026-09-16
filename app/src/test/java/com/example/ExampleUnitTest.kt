@@ -7,8 +7,29 @@ import org.junit.Test
 
 class ExampleUnitTest {
     @Test
-    fun addition_isCorrect() {
-        assertEquals(4, 2 + 2)
+    fun testPreloadedData_curriculumIntegrity() {
+        val chunks = PreloadedData.defaultCurriculumChunks
+        assertTrue("Preloaded curriculum chunks must not be empty", chunks.isNotEmpty())
+        for (chunk in chunks) {
+            assertTrue("Chunk ID must not be blank", chunk.id.isNotBlank())
+            assertTrue("Topic must not be blank", chunk.topic.isNotBlank())
+            assertTrue("Lesson text Hindi must not be blank", chunk.lessonTextHindi.isNotBlank())
+            assertTrue("Tribal language must be SANTHALI, HO, or MUNDARI",
+                listOf("SANTHALI", "HO", "MUNDARI").contains(chunk.tribalLanguage))
+        }
+    }
+
+    @Test
+    fun testPreloadedData_glossaryCompleteness() {
+        val glossary = PreloadedData.defaultGlossaryItems
+        assertTrue("Preloaded glossary must contain entries", glossary.isNotEmpty())
+        for (entry in glossary) {
+            assertTrue("Glossary ID must not be blank", entry.id.isNotBlank())
+            assertTrue("Hindi word must not be blank", entry.hindiWord.isNotBlank())
+            assertTrue("Santhali Ol Chiki must not be blank", entry.santhaliOlChiki.isNotBlank())
+            assertTrue("Ho Devanagari must not be blank", entry.hoDevanagari.isNotBlank())
+            assertTrue("Mundari word must not be blank", entry.mundariWord.isNotBlank())
+        }
     }
 
     @Test

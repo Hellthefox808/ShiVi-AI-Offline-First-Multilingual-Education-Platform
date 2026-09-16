@@ -7,11 +7,6 @@ export class AppController {
 
   @Get('health')
   getHealth() {
-    return {
-      status: 'UP',
-      service: 'BhashaSetu NestJS Backend',
-      timestamp: new Date().toISOString(),
-      tenancy: 'ENABLED'
-    };
+    return this.appService.getHealth();
   }
 }

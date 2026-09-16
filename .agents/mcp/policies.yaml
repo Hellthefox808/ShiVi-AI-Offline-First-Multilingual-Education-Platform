@@ -1,0 +1,95 @@
+# Antigravity Engineering OS — MCP Tool Policies & Permission Matrix
+# Evaluation: Deny > Ask > Allow (Least Privilege Enforcement)
+version: "2026-07-28"
+
+global_security_rules:
+  deny_private_ip_retrieval: true
+  deny_loopback_retrieval: true
+  deny_raw_credential_exfiltration: true
+  enforce_read_only_databases: true
+  require_pre_execution_argument_sanitization: true
+
+policies:
+  github:
+    tools:
+      allow:
+        - "search_repositories"
+        - "get_file_contents"
+        - "list_commits"
+        - "list_issues"
+        - "search_code"
+        - "get_pull_request"
+        - "list_pull_requests"
+        - "create_branch"
+        - "create_issue"
+      ask:
+        - "create_pull_request"
+        - "merge_pull_request"
+        - "update_pull_request_branch"
+      deny:
+        - "delete_repository"
+        - "push_files_to_main_direct"
+
+  filesystem:
+    tools:
+      allow:
+        - "read_file"
+        - "read_multiple_files"
+        - "list_directory"
+        - "list_directory_with_sizes"
+        - "directory_tree"
+        - "search_files"
+        - "get_file_info"
+        - "edit_file"
+        - "write_file"
+      deny_paths:
+        - "**/.env*"
+        - "**/id_rsa*"
+        - "**/credentials*"
+        - "**/*.keystore"
+        - "**/*.jks"
+        - "C:\\Windows\\**"
+        - "C:\\Users\\*\\.ssh\\**"
+
+  web_retrieval:
+    tools:
+      allow:
+        - "duckduckgo_web_search"
+        - "search_web"
+        - "read_url_content"
+      security:
+        deny_internal_ips:
+          - "127.0.0.0/8"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          - "169.254.0.0/16"
+          - "::1/128"
+          - "fc00::/7"
+
+  alloydb_postgresql:
+    tools:
+      allow:
+        - "execute_sql_read_only"
+        - "list_tables"
+        - "get_table_info"
+      deny:
+        - "DROP TABLE"
+        - "DROP DATABASE"
+        - "TRUNCATE"
+        - "DELETE FROM * WHERE 1=1"
+        - "GRANT"
+
+  memory:
+    tools:
+      allow:
+        - "read_graph"
+        - "search_nodes"
+        - "open_nodes"
+        - "create_entities"
+        - "create_relations"
+        - "add_observations"
+      ask:
+        - "delete_entities"
+        - "delete_relations"
+        - "delete_observations"

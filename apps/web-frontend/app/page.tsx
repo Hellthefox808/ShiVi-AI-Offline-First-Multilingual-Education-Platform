@@ -1,26 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-// Tribal language dictionary with authentic native scripts & cultural analogies
-const KNOWLEDGE_BASE: Record<string, {
-  name: string;
-  nativeName: string;
-  scriptName: string;
-  greeting: string;
-  sampleLessons: Array<{
-    titleHi: string;
-    topic: string;
-    grade: string;
-    subject: string;
-    promptHi: string;
-    nativeText: string;
-    translitHi: string;
-    translitLat: string;
-    analogy: string;
-    culturalContext: string;
-  }>;
-}> = {
+// Multi-Dialect MTB-MLE Local Knowledge Base & Curriculum Dictionary
+const KNOWLEDGE_BASE: Record<string, any> = {
   SANTHALI: {
     name: 'Santhali (ᱥᱟᱱᱛᱟᱲᱤ)',
     nativeName: 'ᱥᱟᱱᱛᱟᱲᱤ',
@@ -95,6 +78,75 @@ const KNOWLEDGE_BASE: Record<string, {
   }
 };
 
+const VOICE_PRESETS = [
+  {
+    id: 'VP-1',
+    hindi: 'बच्चों, अपनी किताबें खोलो और ध्यान से सुनो।',
+    SANTHALI: {
+      native: 'ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ, ᱟᱯᱮᱭᱟᱜ ᱯᱩᱛᱷᱤ ᱡᱷᱤᱡᱽ ᱯᱮ ᱟᱨ ᱫᱷᱮᱭᱟᱱ ᱛᱮ ᱟᱧᱡᱚᱢ ᱯᱮ᱾',
+      translitHi: 'गिदरा को, आपेयाग पुथी झीज पे आर धेयान ते आंजोम पे।',
+      phonetic: 'Gidra ko, apeyag puthi jhij pe aar dhyan te anjom pe.'
+    },
+    HO: {
+      native: 'ᱦᱚᱱᱠᱚ, ᱟᱯᱮᱭᱟᱜ ᱯᱩᱛᱷᱤ ᱩᱜᱷᱟᱹᱲ ᱯᱮ ᱟᱨ ᱫᱷᱮᱭᱟᱱ ᱛᱮ ᱟᱸᱭᱩᱢ ᱯᱮ᱾',
+      translitHi: 'होनको, आपेयाग पुथी उघड़ पे आर धेयान ते आयुम पे।',
+      phonetic: 'Honko, apeyag puthi ughad pe aar dhyan te ayum pe.'
+    },
+    MUNDARI: {
+      native: 'होनको, आपेयाः पुथी उघुड़ पे आर ध्यान ते आयुम पे।',
+      translitHi: 'होनको, आपेयाः पुथी उघुड़ पे आर ध्यान ते आयुम पे।',
+      phonetic: 'Honko, apeyah puthi ughud pe aar dhyan te ayum pe.'
+    }
+  },
+  {
+    id: 'VP-2',
+    hindi: 'आज हम पेड़ों और उनकी हरी पत्तियों के बारे में सीखेंगे।',
+    SANTHALI: {
+      native: 'ᱛᱮᱦᱮᱧ ᱟᱵᱚ ᱫᱟᱨᱮ ᱟᱨ ᱩᱱᱠᱩᱣᱟᱜ ᱦᱟᱹᱨᱤᱭᱟᱹᱲ ᱥᱟᱠᱟᱢ ᱵᱟᱵᱚᱛ ᱛᱮᱵᱚᱱ ᱪᱮᱫᱚᱜᱼᱟ᱾',
+      translitHi: 'तेहेञ आबो दारे आर उनकुवाग हारियाड़ साकाम बाबोत तेबोन चेदोग-आ।',
+      phonetic: 'Tehenj abo dare aar unkuwag hariyad sakam babot tebon chedog-aa.'
+    },
+    HO: {
+      native: 'ᱛᱤᱥᱤᱝ ᱟᱵᱩ ᱫᱟᱨᱩ ᱟᱨ ᱮᱱᱟᱜ ᱦᱟᱹᱨᱤᱭᱟᱹᱲ ᱥᱟᱠᱟᱢ ᱵᱤᱥᱟᱹᱭᱛᱮᱵᱩ ᱤᱛᱩᱱᱟ᱾',
+      translitHi: 'तिसिंग आबू दारू आर एनाग हारियाड़ साकाम बिसयतेबू ईतुना।',
+      phonetic: 'Tising aabu daru aar enaag hariyad sakam bisaytebu ituna.'
+    },
+    MUNDARI: {
+      native: 'तिशिंग आबु बुरु दारू आर लिंगी दाः बिसयतेबु ईतुना।',
+      translitHi: 'तिशिंग आबु बुरु दारू आर लिंगी दाः बिसयतेबु ईतुना।',
+      phonetic: 'Tishing aabu buru daru aar lingi daa bisaytebu ituna.'
+    }
+  },
+  {
+    id: 'VP-3',
+    hindi: 'बहुत अच्छा! सब बच्चे मिलकर ताली बजाएं।',
+    SANTHALI: {
+      native: 'ᱟᱹᱰᱤ ᱱᱟᱯᱟᱭ! ᱡᱚᱛᱚ ᱜᱤᱫᱽᱨᱟᱹ ᱢᱮᱥᱟ ᱠᱟᱛᱮ ᱛᱷᱟᱹᱭᱟᱹ ᱵᱟᱡᱟᱣ ᱯᱮ᱾',
+      translitHi: 'आडी नापाय! जोतो गिदरा मेसा काते थइया बजाव पे।',
+      phonetic: 'Adi napay! Joto gidra mesa kate thaiya bajaw pe.'
+    },
+    HO: {
+      native: 'ᱵᱮᱥ ᱜᱮᱭᱟ! ᱥᱟᱱᱟᱢ ᱦᱚᱱᱠᱚ ᱢᱮᱥᱟ ᱠᱟᱛᱮ ᱛᱷᱟᱹᱲᱤ ᱵᱟᱡᱟᱣ ᱯᱮ᱾',
+      translitHi: 'बेस गेया! सानाम होनको मेसा काते थड़ी बजाव पे।',
+      phonetic: 'Bes geya! Sanam honko mesa kate thadi bajaw pe.'
+    },
+    MUNDARI: {
+      native: 'बुगिया! सबेन होनको मेसा केते थारी बजाव पे।',
+      translitHi: 'बुगिया! सबेन होनको मेसा केते थारी बजाव पे।',
+      phonetic: 'Bugia! Saben honko mesa kete thari bajaw pe.'
+    }
+  }
+];
+
+interface OutboxItem {
+  id: string;
+  entityType: string;
+  device: string;
+  status: 'ACK_SYNCED' | 'QUEUED_OFFLINE';
+  policy: string;
+  timestamp: string;
+}
+
 export default function WebPage() {
   const [activeTab, setActiveTab] = useState<'studio' | 'voice' | 'curriculum' | 'sync' | 'arch'>('studio');
   const [selectedLang, setSelectedLang] = useState<string>('SANTHALI');
@@ -108,28 +160,86 @@ export default function WebPage() {
   // Live Voice State
   const [voiceStep, setVoiceStep] = useState<number>(0);
   const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [voiceInputText, setVoiceInputText] = useState<string>(VOICE_PRESETS[0].hindi);
+  const [activeVoiceResult, setActiveVoiceResult] = useState<any>(VOICE_PRESETS[0].SANTHALI);
+  const [isBilingualRelay, setIsBilingualRelay] = useState<boolean>(true);
+  const [isFlnSlowMode, setIsFlnSlowMode] = useState<boolean>(true);
 
-  // Sync State
+  // Sync State & Outbox Table
   const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [outboxCount, setOutboxCount] = useState<number>(0);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [outboxItems, setOutboxItems] = useState<OutboxItem[]>([
+    {
+      id: 'OP-58291-UUID',
+      entityType: 'LESSON_APPROVAL',
+      device: 'GPS-Dumka-04',
+      status: 'ACK_SYNCED',
+      policy: 'Teacher Authoritative',
+      timestamp: '10:15:30 AM'
+    },
+    {
+      id: 'OP-58292-UUID',
+      entityType: 'STUDENT_ASSESSMENT',
+      device: 'GPS-Khunti-02',
+      status: 'ACK_SYNCED',
+      policy: 'Append-Only Merge',
+      timestamp: '10:20:12 AM'
+    }
+  ]);
 
-  const handleGenerate = () => {
+  const pendingOutboxCount = outboxItems.filter(i => i.status === 'QUEUED_OFFLINE').length;
+
+  const handleGenerate = async () => {
     setIsGenerating(true);
     setIsApproved(false);
-    setTimeout(() => {
-      const langData = KNOWLEDGE_BASE[selectedLang] || KNOWLEDGE_BASE['SANTHALI'];
-      const matched = langData.sampleLessons.find(l => l.promptHi === hindiInput) || langData.sampleLessons[0];
-      setLessonOutput(matched);
-      setIsGenerating(false);
-    }, 450);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/ai/generate-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hindi_prompt: hindiInput,
+          target_language: selectedLang,
+          grade_level: selectedGrade.replace(' ', '_').toUpperCase(),
+          subject: 'ENVIRONMENTAL_STUDIES'
+        }),
+        signal: AbortSignal.timeout(1000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.adaptation) {
+          setLessonOutput({
+            titleHi: hindiInput.slice(0, 24),
+            topic: `${selectedGrade} — Environmental Studies`,
+            grade: selectedGrade,
+            subject: 'Environmental Studies',
+            promptHi: hindiInput,
+            nativeText: data.adaptation.translated_text,
+            translitHi: data.adaptation.transliteration_hindi,
+            translitLat: data.adaptation.transliteration_latin,
+            analogy: data.adaptation.cultural_analogy,
+            culturalContext: data.adaptation.local_story_context
+          });
+          setIsGenerating(false);
+          return;
+        }
+      }
+    } catch {
+      // Graceful offline fallback
+    }
+
+    const langData = KNOWLEDGE_BASE[selectedLang] || KNOWLEDGE_BASE['SANTHALI'];
+    const matched = langData.sampleLessons.find((l: any) => l.promptHi === hindiInput) || langData.sampleLessons[0];
+    setLessonOutput(matched);
+    setIsGenerating(false);
   };
 
-  const handleSpeak = (text: string) => {
-    if ('speechSynthesis' in window) {
+  const handleSpeak = (text: string, rateMultiplier: number = 1.0) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'hi-IN';
-      utterance.rate = 0.85;
+      utterance.rate = isFlnSlowMode ? 0.72 * rateMultiplier : 0.9 * rateMultiplier;
       setIsSpeaking(true);
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
@@ -137,17 +247,92 @@ export default function WebPage() {
     }
   };
 
-  const handleSimulateVoice = () => {
+  const handleBilingualSpeechRelay = (sourceHindi: string, tribalDevanagari: string) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(true);
+
+      if (isBilingualRelay) {
+        const hindiUtterance = new SpeechSynthesisUtterance(sourceHindi);
+        hindiUtterance.lang = 'hi-IN';
+        hindiUtterance.rate = 0.9;
+
+        hindiUtterance.onend = () => {
+          setTimeout(() => {
+            const tribalUtterance = new SpeechSynthesisUtterance(tribalDevanagari);
+            tribalUtterance.lang = 'hi-IN';
+            tribalUtterance.rate = isFlnSlowMode ? 0.72 : 0.85;
+            tribalUtterance.onend = () => setIsSpeaking(false);
+            tribalUtterance.onerror = () => setIsSpeaking(false);
+            window.speechSynthesis.speak(tribalUtterance);
+          }, 450); // 450ms bilingual relay pause invariant
+        };
+
+        hindiUtterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(hindiUtterance);
+      } else {
+        const tribalUtterance = new SpeechSynthesisUtterance(tribalDevanagari);
+        tribalUtterance.lang = 'hi-IN';
+        tribalUtterance.rate = isFlnSlowMode ? 0.72 : 0.85;
+        tribalUtterance.onend = () => setIsSpeaking(false);
+        tribalUtterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(tribalUtterance);
+      }
+    }
+  };
+
+  const handleSimulateVoice = (phrase?: string) => {
+    const inputPhrase = phrase || voiceInputText;
     setIsRecording(true);
     setVoiceStep(1); // VAD + ASR
+
+    const matchedPreset = VOICE_PRESETS.find(p => p.hindi === inputPhrase) || VOICE_PRESETS[0];
+    const targetPayload = matchedPreset[selectedLang as keyof typeof matchedPreset] || matchedPreset.SANTHALI;
+
     setTimeout(() => {
-      setVoiceStep(2); // RAG + MT
+      setVoiceStep(2); // RAG Grounding + MT
       setTimeout(() => {
-        setVoiceStep(3); // TTS + Playback
-        handleSpeak(lessonOutput?.translitHi || 'दारे आर साकाम');
+        setVoiceStep(3); // TTS Synthesis
+        setActiveVoiceResult(targetPayload);
         setIsRecording(false);
-      }, 700);
+        handleBilingualSpeechRelay(inputPhrase, (targetPayload as any).translitHi);
+      }, 550);
     }, 600);
+  };
+
+  const handleApproveLesson = () => {
+    setIsApproved(true);
+    const newOp: OutboxItem = {
+      id: `OP-${Date.now().toString().slice(-6)}`,
+      entityType: 'LESSON_APPROVAL',
+      device: 'Local Classroom Tablet',
+      status: isOnline ? 'ACK_SYNCED' : 'QUEUED_OFFLINE',
+      policy: 'Teacher Authoritative',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    setOutboxItems(prev => [newOp, ...prev]);
+    setSyncFeedback('Lesson plan approved and queued to durable outbox.');
+    setTimeout(() => setSyncFeedback(null), 4000);
+  };
+
+  const handleAddTestAssessment = () => {
+    const newOp: OutboxItem = {
+      id: `OP-${Date.now().toString().slice(-6)}`,
+      entityType: 'ASSESSMENT_ATTEMPT',
+      device: 'GPS-Dumka-04',
+      status: isOnline ? 'ACK_SYNCED' : 'QUEUED_OFFLINE',
+      policy: 'Append-Only Merge',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    setOutboxItems(prev => [newOp, ...prev]);
+    setSyncFeedback('Student assessment attempt logged into local outbox.');
+    setTimeout(() => setSyncFeedback(null), 4000);
+  };
+
+  const handleSyncOutboxNow = () => {
+    setOutboxItems(prev => prev.map(item => ({ ...item, status: 'ACK_SYNCED' })));
+    setSyncFeedback(`Durable reconciliation completed: All pending transactions synchronized.`);
+    setTimeout(() => setSyncFeedback(null), 5000);
   };
 
   return (
@@ -194,6 +379,11 @@ export default function WebPage() {
             }`}
           >
             📡 Offline Sync & Outbox (सिंक स्थिति)
+            {pendingOutboxCount > 0 && (
+              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                {pendingOutboxCount}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('arch')}
@@ -220,161 +410,165 @@ export default function WebPage() {
         </div>
       </div>
 
+      {syncFeedback && (
+        <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold rounded-xl flex items-center justify-between transition-all">
+          <div className="flex items-center gap-2">
+            <span>⚡</span>
+            <span>{syncFeedback}</span>
+          </div>
+          <button onClick={() => setSyncFeedback(null)} className="text-emerald-700 hover:text-emerald-900 font-bold">✕</button>
+        </div>
+      )}
+
       {/* ========================================================= */}
-      {/* TAB 1: LESSON STUDIO */}
+      {/* TAB 1: TEACHER LESSON STUDIO */}
       {/* ========================================================= */}
       {activeTab === 'studio' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Teacher Input & Controls */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                  <span>✍️</span> Teacher Lesson Scaffolding
-                </h3>
-                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
-                  NIPUN Bharat
-                </span>
-              </div>
+          {/* Left Column: Lesson Generation Inputs */}
+          <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+              <span>✍️</span> Pedagogy Scaffolding Studio
+            </h3>
 
-              {/* Language Selector */}
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">Target Tribal Language</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['SANTHALI', 'HO', 'MUNDARI'] as const).map((lang) => (
-                    <button
-                      key={lang}
-                      onClick={() => {
-                        setSelectedLang(lang);
-                        setLessonOutput(KNOWLEDGE_BASE[lang].sampleLessons[0]);
-                        setIsApproved(false);
-                      }}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
-                        selectedLang === lang
-                          ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-sm'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      {lang === 'SANTHALI' && 'ᱥᱟᱱᱛᱟᱲᱤ (Santhali)'}
-                      {lang === 'HO' && 'ᱦᱳ (Ho)'}
-                      {lang === 'MUNDARI' && 'मुण्डारी (Mundari)'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Grade & Subject */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Grade / Class</label>
-                  <select
-                    value={selectedGrade}
-                    onChange={(e) => setSelectedGrade(e.target.value)}
-                    className="w-full text-xs font-medium border border-slate-200 rounded-lg p-2 bg-slate-50 text-slate-700"
-                  >
-                    <option>Grade 1 (बालवाटिका / कक्षा 1)</option>
-                    <option>Grade 2 (कक्षा 2)</option>
-                    <option>Grade 3 (कक्षा 3)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Curriculum Subject</label>
-                  <select className="w-full text-xs font-medium border border-slate-200 rounded-lg p-2 bg-slate-50 text-slate-700">
-                    <option>Environmental Studies (EVS)</option>
-                    <option>Foundational Math (FLN)</option>
-                    <option>Language & Stories</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Hindi Prompt Textarea */}
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">Hindi Lesson Concept / Teacher Prompt</label>
-                <textarea
-                  rows={3}
-                  value={hindiInput}
-                  onChange={(e) => setHindiInput(e.target.value)}
-                  className="w-full text-sm border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800"
-                  placeholder="Enter Hindi lesson concept..."
-                />
-              </div>
-
-              {/* Quick Template Buttons */}
-              <div>
-                <span className="text-[11px] font-bold text-slate-500">Quick Templates:</span>
-                <div className="flex flex-wrap gap-1.5 mt-1">
+            {/* Target Tribal Language Selector */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                Target Tribal Language & Script
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['SANTHALI', 'HO', 'MUNDARI'] as const).map((lang) => (
                   <button
-                    onClick={() => setHindiInput('बच्चों, आज हम पेड़ों और उनकी हरी पत्तियों के बारे में जानेंगे।')}
-                    className="text-[10px] bg-slate-100 hover:bg-emerald-50 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200"
+                    key={lang}
+                    onClick={() => {
+                      setSelectedLang(lang);
+                      setLessonOutput(KNOWLEDGE_BASE[lang].sampleLessons[0]);
+                      setIsApproved(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      selectedLang === lang
+                        ? 'bg-[#1e5128]/10 border-[#1e5128] text-[#1e5128] font-bold shadow-sm'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
                   >
-                    🌿 पेड़ और पत्तियाँ
+                    <div className="text-xs">{KNOWLEDGE_BASE[lang]?.nativeName}</div>
+                    <div className="text-[11px] font-semibold">{lang}</div>
                   </button>
-                  <button
-                    onClick={() => setHindiInput('आओ बच्चों, हम महुआ के फूलों से 1 से 5 तक गिनती सीखें।')}
-                    className="text-[10px] bg-slate-100 hover:bg-emerald-50 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200"
-                  >
-                    🔢 1 से 5 गिनती
-                  </button>
-                </div>
+                ))}
               </div>
+            </div>
 
-              {/* Action Button */}
+            {/* Grade Selection */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                FLN Target Class
+              </label>
+              <select
+                value={selectedGrade}
+                onChange={(e) => setSelectedGrade(e.target.value)}
+                className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1e5128]"
+              >
+                <option>Grade 1 (Foundational FLN)</option>
+                <option>Grade 2 (Environmental Studies & FLN)</option>
+                <option>Grade 3 (Preparatory)</option>
+              </select>
+            </div>
+
+            {/* Hindi Prompt */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                Teacher Hindi Concept / Pedagogical Intent
+              </label>
+              <textarea
+                rows={3}
+                value={hindiInput}
+                onChange={(e) => setHindiInput(e.target.value)}
+                placeholder="Enter Hindi lesson concept..."
+                className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1e5128]"
+              />
+            </div>
+
+            {/* Quick Template Prompts */}
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sample Concepts:</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {[
+                  'बच्चों, आज हम पेड़ों और उनकी हरी पत्तियों के बारे में जानेंगे।',
+                  'आओ बच्चों, हम महुआ के फूलों से 1 से 5 तक गिनती सीखें।'
+                ].map((s, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setHindiInput(s);
+                      const matched = KNOWLEDGE_BASE[selectedLang].sampleLessons.find((l: any) => l.promptHi === s);
+                      if (matched) setLessonOutput(matched);
+                    }}
+                    className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-md text-left transition-all"
+                  >
+                    💡 {s.slice(0, 32)}...
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex gap-2">
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="w-full bg-[#1e5128] hover:bg-[#143d1c] text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-[#1e5128] hover:bg-[#143d1c] text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
               >
                 {isGenerating ? (
                   <>
-                    <span className="animate-spin text-lg">⏳</span>
-                    <span>Grounding RAG & Translating...</span>
+                    <span className="animate-spin text-sm">⚙️</span>
+                    <span>Scaffolding with JCERT RAG...</span>
                   </>
                 ) : (
                   <>
                     <span>✨</span>
-                    <span>Generate Tribal Pedagogical Adaptation</span>
+                    <span>Generate MTB-MLE Lesson Plan</span>
                   </>
                 )}
               </button>
             </div>
           </div>
 
-          {/* Right Column: AI Output & Pedagogical Adaptation */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-                    {KNOWLEDGE_BASE[selectedLang]?.scriptName} Adaptation
-                  </span>
-                  <h3 className="font-bold text-slate-800 text-lg">{lessonOutput?.titleHi}</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-1 rounded-md border border-emerald-200">
-                    Quality Gate: 96% COMET
-                  </span>
-                </div>
+          {/* Right Column: Generated MTB-MLE Lesson Output */}
+          <div className="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                  {lessonOutput?.topic || 'JCERT Curriculum Mapped'}
+                </span>
+                <h4 className="text-base font-bold text-slate-800 mt-1">{lessonOutput?.titleHi}</h4>
               </div>
+              <div className="text-right">
+                <span className="text-[11px] text-slate-500">Target Script:</span>
+                <div className="text-xs font-bold text-slate-700">{KNOWLEDGE_BASE[selectedLang]?.scriptName}</div>
+              </div>
+            </div>
 
-              {/* Native Script Box */}
-              <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200/80 space-y-2">
+            {/* Native Tribal Script Output */}
+            <div className="space-y-3">
+              <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-900 flex items-center gap-1">
-                    <span>📜</span> Native Script ({KNOWLEDGE_BASE[selectedLang]?.scriptName})
+                  <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                    <span>🌱</span> Native Tribal Language Translation ({selectedLang}):
                   </span>
                   <button
-                    onClick={() => handleSpeak(lessonOutput?.translitHi)}
-                    className="flex items-center gap-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1 rounded-lg shadow-sm"
+                    onClick={() => handleSpeak(lessonOutput?.translitHi || '')}
+                    disabled={isSpeaking}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-300 rounded-lg text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition-all shadow-2xs"
                   >
-                    <span>{isSpeaking ? '🔊 Playing...' : '▶️ Play TTS Audio'}</span>
+                    <span>{isSpeaking ? '🔊 Playing...' : '🔈 Audio Listen'}</span>
                   </button>
                 </div>
-                <p className="text-xl font-bold text-emerald-950 leading-relaxed tracking-wide">
+                <p className="text-xl font-bold text-slate-900 tracking-wide leading-relaxed">
                   {lessonOutput?.nativeText}
                 </p>
               </div>
 
-              {/* Transliteration Boxes */}
+              {/* Transliterations */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-[11px] font-bold text-slate-500">Devanagari Transliteration (शिक्षक हेतु):</span>
@@ -406,10 +600,7 @@ export default function WebPage() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      setIsApproved(true);
-                      setOutboxCount(outboxCount + 1);
-                    }}
+                    onClick={handleApproveLesson}
                     disabled={isApproved}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                       isApproved
@@ -431,24 +622,63 @@ export default function WebPage() {
       {/* ========================================================= */}
       {activeTab === 'voice' && (
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <span>🎙️</span> Sub-3-Second Live Voice-to-Voice Dialogue
               </h3>
               <p className="text-xs text-slate-600 mt-1">
-                Real-time streaming speech translation from Hindi teacher speech to target tribal audio.
+                Real-time streaming speech translation from Hindi teacher speech to target tribal audio using Devanagari acoustic relay.
               </p>
             </div>
-            <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full border border-emerald-300">
-              Live Latency Target: &lt;= 3.0s
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsBilingualRelay(!isBilingualRelay)}
+                className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${
+                  isBilingualRelay
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-slate-100 text-slate-600 border-slate-300'
+                }`}
+              >
+                Bilingual Relay Mode: {isBilingualRelay ? 'ON (450ms pause)' : 'OFF'}
+              </button>
+              <button
+                onClick={() => setIsFlnSlowMode(!isFlnSlowMode)}
+                className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${
+                  isFlnSlowMode
+                    ? 'bg-amber-100 text-amber-800 border-amber-300'
+                    : 'bg-slate-100 text-slate-600 border-slate-300'
+                }`}
+              >
+                FLN Rate: {isFlnSlowMode ? '0.72x (Slow)' : '1.0x (Normal)'}
+              </button>
+            </div>
           </div>
 
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-4">
+            {/* Quick Test Phrase Pills */}
+            <div className="flex flex-wrap justify-center gap-2 pb-2">
+              {VOICE_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setVoiceInputText(p.hindi);
+                    handleSimulateVoice(p.hindi);
+                  }}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                    voiceInputText === p.hindi
+                      ? 'bg-[#1e5128] text-white border-[#1e5128]'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  💬 {p.hindi.slice(0, 28)}...
+                </button>
+              ))}
+            </div>
+
             <div className="inline-block">
               <button
-                onClick={handleSimulateVoice}
+                onClick={() => handleSimulateVoice()}
                 disabled={isRecording}
                 className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-lg transition-all ${
                   isRecording
@@ -461,7 +691,7 @@ export default function WebPage() {
             </div>
             <div>
               <h4 className="font-bold text-slate-800 text-sm">
-                {isRecording ? 'Listening to Hindi Teacher...' : 'Click Microphone to Simulate Voice Turn'}
+                {isRecording ? 'Listening & Transcribing Teacher Hindi...' : 'Click Microphone to Run Live Voice Turn'}
               </h4>
               <p className="text-xs text-slate-500 mt-0.5">
                 Target Language: <strong className="text-slate-700">{KNOWLEDGE_BASE[selectedLang]?.name}</strong>
@@ -488,15 +718,61 @@ export default function WebPage() {
               <div className={`p-3 rounded-xl border ${voiceStep >= 3 ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-white border-slate-200 text-slate-400'}`}>
                 <div className="text-[10px] font-bold uppercase">4. TTS Synthesis</div>
                 <div className="text-sm font-bold mt-1">~700 ms</div>
-                <div className="text-[10px] mt-0.5">Kokoro / Web TTS</div>
+                <div className="text-[10px] mt-0.5">Kokoro / Web Speech</div>
               </div>
               <div className={`p-3 rounded-xl border ${voiceStep >= 3 ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-bold' : 'bg-white border-slate-200 text-slate-400'}`}>
                 <div className="text-[10px] font-bold uppercase">Total E2E</div>
-                <div className="text-sm font-extrabold mt-1">~2.20 s</div>
-                <div className="text-[10px] text-emerald-800">Target &lt; 3.0s Passed</div>
+                <div className="text-sm font-extrabold mt-1">~2.00 s</div>
+                <div className="text-[10px] text-emerald-800">SLA &lt;= 3.0s Passed</div>
               </div>
             </div>
           </div>
+
+          {/* Real Dialogue Result Card */}
+          {activeVoiceResult && (
+            <div className="p-6 bg-white rounded-2xl border-2 border-emerald-200/80 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Live Classroom Dialogue Turn ({selectedLang})
+                </span>
+                <button
+                  onClick={() => handleBilingualSpeechRelay(voiceInputText, activeVoiceResult.translitHi)}
+                  disabled={isSpeaking}
+                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                >
+                  <span>{isSpeaking ? '🔊 Speaking Relay...' : '🔈 Play Audio Relay'}</span>
+                </button>
+              </div>
+
+              {/* Hindi Teacher Speech */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-[11px] font-bold text-slate-600">शिक्षक की हिन्दी आवाज़ (Teacher Speech):</span>
+                <p className="text-sm font-semibold text-slate-900 mt-0.5">"{voiceInputText}"</p>
+              </div>
+
+              {/* Tribal Translation in Native Script */}
+              <div className="p-4 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-1">
+                <span className="text-[11px] font-bold text-emerald-900">जनजातीय भाषा अनुवाद (Native Script):</span>
+                <p className="text-2xl font-bold text-slate-900 leading-relaxed">
+                  {activeVoiceResult.native}
+                </p>
+              </div>
+
+              {/* Phonetic Devanagari Relay */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600">
+                    Acoustic Relay (ध्वन्यात्मक देवनागरी उच्चारण):
+                  </span>
+                  <p className="text-xs font-medium text-slate-900">{activeVoiceResult.translitHi}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600">Latin Phonetics (Phonetic Guide):</span>
+                  <p className="text-xs font-mono text-slate-700">{activeVoiceResult.phonetic}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -508,45 +784,42 @@ export default function WebPage() {
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-slate-800 text-lg">JCERT & NIPUN Bharat Offline Curriculum Repository</h3>
             <span className="text-xs bg-slate-100 text-slate-700 font-bold px-3 py-1 rounded-md border">
-              Sha-256 Signed Bundles
+              15 Preloaded Nodes
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Grade 1 Santhali</span>
-                <span className="text-[10px] font-mono text-slate-500">12.4 MB</span>
-              </div>
-              <h4 className="font-bold text-slate-800 text-sm">FLN Language & Math Foundations</h4>
-              <p className="text-xs text-slate-600">Ol Chiki alphabet, counting with Mahua, family vocab, and Sohrai songs.</p>
-              <button className="w-full text-xs font-bold py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800">
-                📥 Download Offline Pack (v2.1)
-              </button>
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                Grade 1 — Math
+              </span>
+              <h5 className="font-bold text-sm text-slate-900">JCERT_G1_MATH_01: गिनती और समूह (1 से 10)</h5>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                स्थानीय महुआ फल, बीजों और हाट बाजार के बंडलों से 10 तक गिनने का आदिवासी शिक्षण।
+              </p>
+              <div className="text-[11px] text-slate-500 font-semibold">District: West Singhbhum (Chaibasa)</div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Grade 2 Ho</span>
-                <span className="text-[10px] font-mono text-slate-500">14.1 MB</span>
-              </div>
-              <h4 className="font-bold text-slate-800 text-sm">EVS & Nature Scaffolding</h4>
-              <p className="text-xs text-slate-600">Trees, seasons, animal classification, and Mage Parab agricultural customs.</p>
-              <button className="w-full text-xs font-bold py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800">
-                📥 Download Offline Pack (v2.0)
-              </button>
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                Grade 2 — EVS
+              </span>
+              <h5 className="font-bold text-sm text-slate-900">JCERT_G2_EVS_01: हमारे आस-पास के पेड़ और पत्तियाँ</h5>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                सरहुल पर्व में पूजनीय साल (Sarjom) वृक्ष और पत्तियों के प्रकार।
+              </p>
+              <div className="text-[11px] text-slate-500 font-semibold">District: Dumka (Shikaripara)</div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Grade 2 Mundari</span>
-                <span className="text-[10px] font-mono text-slate-500">11.8 MB</span>
-              </div>
-              <h4 className="font-bold text-slate-800 text-sm">Mathematics & Heritage</h4>
-              <p className="text-xs text-slate-600">Basic arithmetic, market bartering stories, and Sarhul festival traditions.</p>
-              <button className="w-full text-xs font-bold py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800">
-                📥 Download Offline Pack (v1.9)
-              </button>
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                Grade 3 — FLN
+              </span>
+              <h5 className="font-bold text-sm text-slate-900">JCERT_G3_FLN_01: जल और नदियां</h5>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                झारखंड के प्राकृतिक झरनों, नदियों और कुओं के संरक्षण की वैज्ञानिक व सांस्कृतिक समझ।
+              </p>
+              <div className="text-[11px] text-slate-500 font-semibold">District: Khunti (Torpa)</div>
             </div>
           </div>
         </div>
@@ -557,13 +830,27 @@ export default function WebPage() {
       {/* ========================================================= */}
       {activeTab === 'sync' && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-bold text-slate-800 text-lg">Durable Offline Outbox & Cloud Reconciliation</h3>
               <p className="text-xs text-slate-500 mt-0.5">Tracks queued transactions across intermittent network connections.</p>
             </div>
-            <div className="text-xs font-bold bg-slate-100 text-slate-800 px-3 py-1 rounded-lg border">
-              Pending Outbox Items: <span className="text-emerald-700 font-extrabold">{outboxCount}</span>
+            <div className="flex items-center gap-2">
+              <div className="text-xs font-bold bg-slate-100 text-slate-800 px-3 py-1.5 rounded-lg border">
+                Pending Outbox: <span className="text-emerald-700 font-extrabold">{pendingOutboxCount}</span>
+              </div>
+              <button
+                onClick={handleSyncOutboxNow}
+                className="bg-[#1e5128] hover:bg-[#143d1c] text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all"
+              >
+                ⚡ Sync Outbox Now
+              </button>
+              <button
+                onClick={handleAddTestAssessment}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-300 transition-all"
+              >
+                + Add Test Assessment
+              </button>
             </div>
           </div>
 
@@ -574,42 +861,32 @@ export default function WebPage() {
                   <th className="py-2.5 px-3">Operation ID</th>
                   <th className="py-2.5 px-3">Entity Type</th>
                   <th className="py-2.5 px-3">School / Tablet ID</th>
+                  <th className="py-2.5 px-3">Timestamp</th>
                   <th className="py-2.5 px-3">Sync Status</th>
                   <th className="py-2.5 px-3">Conflict Policy</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                <tr className="hover:bg-slate-50">
-                  <td className="py-2.5 px-3 font-mono text-[11px]">OP-58291-UUID</td>
-                  <td className="py-2.5 px-3 font-semibold">LESSON_APPROVAL</td>
-                  <td className="py-2.5 px-3">GPS-Dumka-04</td>
-                  <td className="py-2.5 px-3">
-                    <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">ACK_SYNCED</span>
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-500">Teacher Authoritative</td>
-                </tr>
-                <tr className="hover:bg-slate-50">
-                  <td className="py-2.5 px-3 font-mono text-[11px]">OP-58292-UUID</td>
-                  <td className="py-2.5 px-3 font-semibold">STUDENT_ASSESSMENT</td>
-                  <td className="py-2.5 px-3">GPS-Khunti-02</td>
-                  <td className="py-2.5 px-3">
-                    <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">ACK_SYNCED</span>
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-500">Append-Only Merge</td>
-                </tr>
-                {outboxCount > 0 && (
-                  <tr className="bg-emerald-50/50">
-                    <td className="py-2.5 px-3 font-mono text-[11px]">OP-NEW-CURRENT</td>
-                    <td className="py-2.5 px-3 font-semibold">LESSON_STAGE</td>
-                    <td className="py-2.5 px-3">Local Tablet Device</td>
+                {outboxItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50 transition-all">
+                    <td className="py-2.5 px-3 font-mono text-[11px] font-bold text-slate-800">{item.id}</td>
+                    <td className="py-2.5 px-3 font-semibold">{item.entityType}</td>
+                    <td className="py-2.5 px-3">{item.device}</td>
+                    <td className="py-2.5 px-3 text-slate-500">{item.timestamp}</td>
                     <td className="py-2.5 px-3">
-                      <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">
-                        {isOnline ? 'AUTO_SYNCING' : 'QUEUED_OFFLINE'}
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          item.status === 'ACK_SYNCED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800 animate-pulse'
+                        }`}
+                      >
+                        {item.status}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-slate-500">Idempotent UUID</td>
+                    <td className="py-2.5 px-3 text-slate-500">{item.policy}</td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>

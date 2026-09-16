@@ -1,0 +1,129 @@
+# Antigravity Engineering OS — Master MCP Server Registry
+# Specification: MCP 2026-07-28 (Stateless Core, Header Routing, Cacheable Tool Lists, Auth Hardening)
+version: "2026-07-28"
+last_audit: "2026-09-16T10:55:00Z"
+auditor: "Hellthefox808"
+
+servers:
+  github:
+    server_id: "github"
+    provider: "@modelcontextprotocol/server-github"
+    transport: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    trust: "high"
+    mode: "read-write"
+    cache_policy:
+      ttl_ms: 300000 # 5 minutes
+      cache_scope: "workspace"
+    auth:
+      type: "env_token"
+      var: "GITHUB_PERSONAL_ACCESS_TOKEN"
+      verified_identity: "Hellthefox808"
+    scope:
+      repositories:
+        - "Hellthefox808/BhashaSetu-AI-Offline-First-Multilingual-Education-Platform"
+    health:
+      status: "CONNECTED"
+      last_verified: "2026-09-16T10:31:49Z"
+      latency_ms: 180
+
+  chrome_devtools:
+    server_id: "chrome-devtools-mcp"
+    provider: "chrome-devtools-mcp"
+    transport: "stdio"
+    command: "npx"
+    args: ["-y", "chrome-devtools-mcp"]
+    trust: "high"
+    mode: "interactive"
+    cache_policy:
+      ttl_ms: 60000
+      cache_scope: "session"
+    scope:
+      allowed_domains:
+        - "localhost:3000"
+        - "localhost:3001"
+        - "localhost:8000"
+    health:
+      status: "CONNECTED"
+      last_verified: "2026-09-16T10:26:19Z"
+
+  context7:
+    server_id: "context7"
+    provider: "mcp-remote"
+    transport: "http"
+    endpoint: "https://mcp.context7.com/mcp"
+    trust: "medium"
+    mode: "read-only"
+    cache_policy:
+      ttl_ms: 3600000 # 1 hour
+      cache_scope: "global"
+    scope:
+      libraries:
+        - "next.js"
+        - "react"
+        - "nestjs"
+        - "fastapi"
+        - "jetpack-compose"
+    health:
+      status: "CONNECTED"
+      last_verified: "2026-09-16T10:26:19Z"
+
+  memory:
+    server_id: "memory"
+    provider: "@modelcontextprotocol/server-memory"
+    transport: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-memory"]
+    trust: "internal"
+    mode: "read-write"
+    cache_policy:
+      ttl_ms: 1800000
+      cache_scope: "project"
+    scope:
+      storage: "local-graph"
+      max_entities: 5000
+    health:
+      status: "CONNECTED"
+      last_verified: "2026-09-16T10:26:19Z"
+
+  git:
+    server_id: "git"
+    provider: "mcp-server-git"
+    transport: "stdio"
+    command: "uvx"
+    args: ["mcp-server-git", "--repository", "D:\\HACKTHON\\bhashasetu-ai"]
+    trust: "high"
+    mode: "read-write"
+    scope:
+      path: "D:\\HACKTHON\\bhashasetu-ai"
+    health:
+      status: "CONNECTED"
+      last_verified: "2026-09-16T10:31:35Z"
+
+  filesystem:
+    server_id: "filesystem"
+    provider: "@modelcontextprotocol/server-filesystem"
+    transport: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "D:\\HACKTHON\\bhashasetu-ai"]
+    trust: "local"
+    mode: "scoped"
+    scope:
+      allowed_roots:
+        - "D:\\HACKTHON\\bhashasetu-ai"
+    health:
+      status: "CONNECTED"
+      last_verified: "2026-09-16T10:26:19Z"
+
+  sequential_thinking:
+    server_id: "sequential-thinking"
+    provider: "@modelcontextprotocol/server-sequential-thinking"
+    transport: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    trust: "high"
+    mode: "stateless"
+    health:
+      status: "CONNECTED"
+      last_verified: "2026-09-16T10:26:19Z"

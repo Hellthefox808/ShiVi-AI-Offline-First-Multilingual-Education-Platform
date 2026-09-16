@@ -1,0 +1,102 @@
+{
+  "$schema": "https://antigravity.google/schemas/temporal-memory-graph.json",
+  "version": "1.0.0",
+  "project": "bhashasetu-ai",
+  "updated_at": "2026-09-16T10:55:00Z",
+  "entities": [
+    {
+      "id": "ent_arch_acoustic_relay",
+      "type": "architecture_decision",
+      "name": "Devanagari Acoustic Relay for Tribal TTS",
+      "content": "Android TTS acoustic engines (hi-IN) do not natively synthesize Ol Chiki (Santhali) or Warang Chiti (Ho) script glyphs. All tribal phonetic synthesis routes through Devanagari transliteration with 0.72x FLN rate calibration and 450ms bilingual pause relay.",
+      "source": {
+        "type": "repository",
+        "path": "app/src/main/java/com/example/ui/util/TtsManager.kt",
+        "commit": "11727b5"
+      },
+      "created_at": "2026-09-16T10:31:35Z",
+      "valid_at": "2026-08-01T00:00:00Z",
+      "invalid_at": null,
+      "confidence": 1.0,
+      "verification": "VERIFIED",
+      "importance": 0.98,
+      "tags": ["android", "tts", "phonetics", "santhali", "ho", "acoustic-relay"],
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "id": "ent_arch_gradle_jvm_guardrail",
+      "type": "operational_constraint",
+      "name": "Windows Gradle JVM Native Heap Allocation Boundary",
+      "content": "To prevent fatal JVM native memory exhaustion (malloc failed / arena.cpp:168) on Windows, gradle.properties enforces: org.gradle.jvmargs=-Xmx2048m -XX:+UseG1GC -XX:MaxMetaspaceSize=512m and org.gradle.workers.max=2.",
+      "source": {
+        "type": "repository",
+        "path": "gradle.properties",
+        "commit": "11727b5"
+      },
+      "created_at": "2026-09-16T10:31:35Z",
+      "valid_at": "2026-09-15T00:00:00Z",
+      "invalid_at": null,
+      "confidence": 1.0,
+      "verification": "VERIFIED",
+      "importance": 0.96,
+      "tags": ["gradle", "jvm", "memory", "android", "windows"],
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "id": "ent_arch_durable_outbox",
+      "type": "data_architecture",
+      "name": "Offline-First Durable Outbox Reconciliation",
+      "content": "All edge transactions (lesson generation, student assessment attempts, teacher approvals) are committed first to Room SQLite outbox with idempotent UUIDs, then synchronized to NestJS /api/v1/sync/push via append-only merge and teacher-authoritative conflict resolution.",
+      "source": {
+        "type": "repository",
+        "path": "services/web-backend/src/sync/sync.service.ts",
+        "commit": "11727b5"
+      },
+      "created_at": "2026-09-16T10:31:35Z",
+      "valid_at": "2026-08-15T00:00:00Z",
+      "invalid_at": null,
+      "confidence": 0.99,
+      "verification": "VERIFIED",
+      "importance": 0.95,
+      "tags": ["sync", "outbox", "offline-first", "idempotency"],
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "id": "ent_arch_hybrid_rag_bm25_dense",
+      "type": "ai_pipeline",
+      "name": "Hybrid RAG JCERT Retrieval Engine",
+      "content": "JCERT state primary school curriculum nodes (15 verified nodes across Grades 1-5) are indexed with BM25 lexical tokenization plus BAAI/bge-m3 dense embeddings, achieving 100% recall@1 with sub-millisecond retrieval latency (0.64ms avg).",
+      "source": {
+        "type": "benchmark",
+        "path": "tests/benchmark_rag.py",
+        "commit": "11727b5"
+      },
+      "created_at": "2026-09-16T10:37:07Z",
+      "valid_at": "2026-08-20T00:00:00Z",
+      "invalid_at": null,
+      "confidence": 1.0,
+      "verification": "VERIFIED",
+      "importance": 0.97,
+      "tags": ["rag", "jcert", "bge-m3", "bm25", "hybrid-search"],
+      "supersedes": null,
+      "superseded_by": null
+    }
+  ],
+  "relations": [
+    {
+      "source_id": "ent_arch_acoustic_relay",
+      "relation": "ENABLES_OFFLINE_SYNTHESIS_FOR",
+      "target_id": "ent_arch_durable_outbox",
+      "valid_at": "2026-08-01T00:00:00Z"
+    },
+    {
+      "source_id": "ent_arch_hybrid_rag_bm25_dense",
+      "relation": "PROVIDES_CONTEXT_TO",
+      "target_id": "ent_arch_acoustic_relay",
+      "valid_at": "2026-08-20T00:00:00Z"
+    }
+  ]
+}
