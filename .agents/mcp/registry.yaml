@@ -127,3 +127,21 @@ servers:
     health:
       status: "CONNECTED"
       last_verified: "2026-09-16T10:26:19Z"
+
+  uimax:
+    server_id: "uimax"
+    provider: "uimax-mcp"
+    transport: "stdio"
+    command: "cmd.exe"
+    args: ["/c", "npx", "-y", "uimax-mcp@latest"]
+    trust: "high"
+    mode: "read-audit"
+    scope:
+      ui_optimization: true
+      tailwind_v4: true
+      react19: true
+      a11y: true
+    health:
+      status: "CONFIGURED"
+      last_verified: "2026-09-16T11:40:00Z"
+
