@@ -26,8 +26,9 @@ export class AiClientService {
       if (response.ok) {
         return await response.json();
       }
-    } catch (err) {
-      this.logger.warn(`AI Platform remote call failed, using local resilient fallback: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`AI Platform remote call failed, using local resilient fallback: ${message}`);
     }
 
     // Local resilient fallback

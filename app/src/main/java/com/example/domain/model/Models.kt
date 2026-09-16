@@ -93,8 +93,17 @@ data class VoiceTurn(
     val targetText: String,
     val scriptText: String,
     val transliteration: String,
+    val transliterationDevanagari: String = "",
     val latencyMs: Long,
     val timestamp: Long = System.currentTimeMillis()
+)
+
+data class VoiceSettings(
+    val speechRate: Float = 0.92f,
+    val pitch: Float = 1.0f,
+    val isBilingualRelayEnabled: Boolean = false,
+    val isSlowClassroomMode: Boolean = false,
+    val autoPlayOnTranslate: Boolean = true
 )
 
 data class PracticeQuizQuestion(

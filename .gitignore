@@ -19,6 +19,7 @@ out/
 dist/
 .turbo/
 .npm/
+*.tsbuildinfo
 
 # Python & AI artifacts
 __pycache__/
@@ -37,7 +38,11 @@ htmlcov/
 # AI Assistant & IDE / Agent files
 CLAUDE.md
 .claude/
-.agents/
+.jolli/
+.agents/*
+!.agents/memory/
+!.agents/skills/
+!.agents/rules/
 .gemini/
 .system_generated/
 .codelens/

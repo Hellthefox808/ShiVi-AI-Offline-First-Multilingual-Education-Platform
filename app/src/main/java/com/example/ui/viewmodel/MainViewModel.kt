@@ -8,6 +8,7 @@ import com.example.BhashaSetuApplication
 import com.example.data.local.*
 import com.example.data.seed.PreloadedData
 import com.example.domain.model.*
+import com.example.ui.util.SpeechToTextManager
 import com.example.ui.util.TtsManager
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,7 +16,16 @@ import kotlinx.coroutines.launch
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = (application as BhashaSetuApplication).repository
     val ttsManager = TtsManager(application)
+    val sttManager = SpeechToTextManager(application)
     val isSpeaking: StateFlow<Boolean> = ttsManager.isSpeaking
+    val isListening: StateFlow<Boolean> = sttManager.isListening
+    val speechRmsDb: StateFlow<Float> = sttManager.rmsDb
+    val recognizedSpeech: StateFlow<String> = sttManager.recognizedText
+    val partialSpeech: StateFlow<String> = sttManager.partialText
+    val speechError: StateFlow<String?> = sttManager.errorMessage
+    val voiceSettings = MutableStateFlow(VoiceSettings())
+    var isVoiceSettingsOpen = MutableStateFlow(false)
+        private set
 
     // State flows from repository
     val allLessons: StateFlow<List<LessonEntity>> = repository.allLessons
@@ -134,11 +144,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             targetText = "ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ! ᱛᱮᱦᱮᱧ ᱫᱚ ᱟᱵᱚ ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱮ ᱵᱟᱵᱚᱛ ᱵᱚᱱ ᱯᱟᱲᱦᱟᱣ-ᱟ᱾",
             scriptText = "ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ! (Johar gidra ko!)",
             transliteration = "Johar gidra ko! Teheny do abo sarjom dare babot bon padhaw-a.",
+            transliterationDevanagari = "जोहार गिदरा को! तेहेञ दो आबो सारजोम दारे बाबोत बोन पाढ़ाव-आ।",
             latencyMs = 1120L
         )
     ))
-    var isListening = MutableStateFlow(false)
-        private set
     var voiceInputText = MutableStateFlow("")
         private set
 
@@ -429,11 +438,80 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun sendVoiceUtterance(text: String) {
         if (text.isBlank()) return
         viewModelScope.launch {
-            isListening.value = false
             val turn = repository.translateLiveVoiceTurn(text, selectedLanguage.value)
             voiceTurns.value = voiceTurns.value + turn
             voiceInputText.value = ""
+
+            if (voiceSettings.value.autoPlayOnTranslate) {
+                if (voiceSettings.value.isBilingualRelayEnabled) {
+                    playBilingualRelay(turn)
+                } else {
+                    playTribalSpeech(turn, voiceSettings.value.isSlowClassroomMode)
+                }
+            }
         }
+    }
+
+    fun openVoiceSettings(open: Boolean) {
+        isVoiceSettingsOpen.value = open
+    }
+
+    fun updateSpeechRate(rate: Float) {
+        voiceSettings.value = voiceSettings.value.copy(speechRate = rate)
+        ttsManager.setSpeechRate(rate)
+    }
+
+    fun updatePitch(pitch: Float) {
+        voiceSettings.value = voiceSettings.value.copy(pitch = pitch)
+        ttsManager.setPitch(pitch)
+    }
+
+    fun toggleBilingualRelay(enabled: Boolean) {
+        voiceSettings.value = voiceSettings.value.copy(isBilingualRelayEnabled = enabled)
+    }
+
+    fun toggleSlowClassroomMode(enabled: Boolean) {
+        val newRate = if (enabled) 0.72f else 0.92f
+        voiceSettings.value = voiceSettings.value.copy(isSlowClassroomMode = enabled, speechRate = newRate)
+        ttsManager.setSpeechRate(newRate)
+    }
+
+    fun toggleAutoPlayOnTranslate(enabled: Boolean) {
+        voiceSettings.value = voiceSettings.value.copy(autoPlayOnTranslate = enabled)
+    }
+
+    fun startVoiceRecognition() {
+        sttManager.startListening(languageCode = "hi-IN") { recognizedSpokenText ->
+            if (recognizedSpokenText.isNotBlank()) {
+                sendVoiceUtterance(recognizedSpokenText)
+            }
+        }
+    }
+
+    fun stopVoiceRecognition() {
+        sttManager.stopListening()
+    }
+
+    fun playTribalSpeech(turn: VoiceTurn, slowMode: Boolean = false) {
+        val phonetic = turn.transliterationDevanagari.ifBlank { turn.hindiText }
+        ttsManager.speakTribalPhonetic(
+            devanagariPhonetic = phonetic,
+            fallbackText = turn.targetText,
+            slowMode = slowMode,
+            utteranceId = "tr_${turn.id}"
+        )
+    }
+
+    fun playBilingualRelay(turn: VoiceTurn) {
+        val phonetic = turn.transliterationDevanagari.ifBlank { turn.targetText }
+        ttsManager.speakBilingualRelay(
+            hindiSource = turn.hindiText,
+            tribalDevanagari = phonetic
+        )
+    }
+
+    fun playSourceHindi(turn: VoiceTurn) {
+        ttsManager.speak(turn.hindiText, "hi", utteranceId = "hi_${turn.id}")
     }
 
     fun generateFlashcardVisual() {
@@ -547,6 +625,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        sttManager.destroy()
         ttsManager.shutdown()
     }
 
