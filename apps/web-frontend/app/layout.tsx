@@ -1,6 +1,7 @@
 import React from 'react';
 import './globals.css';
 import { Plus_Jakarta_Sans, Outfit } from 'next/font/google';
+import { Sparkles, BookOpen, Zap } from 'lucide-react';
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Logo & Platform Info */}
             <div className="flex items-center space-x-3.5">
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-900/40 border border-emerald-400/30">
-                <span className="text-2xl drop-shadow-sm">🌉</span>
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
@@ -60,10 +61,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span>Edge Mesh Active</span>
               </div>
               <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300">
-                <span>📚 JCERT Primary (Grades 1-5)</span>
+                <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                <span>JCERT Primary (Grades 1-5)</span>
               </div>
               <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-300">
-                <span>⚡ Sub-3s SLA Compliant</span>
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Sub-3s SLA Compliant</span>
               </div>
             </div>
           </div>
