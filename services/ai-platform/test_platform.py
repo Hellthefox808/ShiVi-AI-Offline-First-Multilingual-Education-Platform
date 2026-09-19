@@ -106,3 +106,52 @@ def test_unified_synthesis_pipeline_e2e():
     assert output["pipeline_status"] in ["AUTO_PUBLISHED", "PENDING_EDUCATOR_REVIEW"]
     assert "multilingual_bundle" in output
     assert "offline_distribution_package" in output
+
+def test_fastapi_voice_translate_endpoints():
+    from fastapi.testclient import TestClient
+    from main import app
+    client = TestClient(app)
+
+    # Test /api/v1/ai/voice/translate with transcription_hindi and fln_mode
+    response = client.post("/api/v1/ai/voice/translate", json={
+        "transcription_hindi": "नमस्ते बच्चों, आज हम पढ़ेंगे",
+        "target_language": "SANTHALI",
+        "fln_mode": True,
+        "bilingual_relay": True
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["turn_id"].startswith("VOICE-")
+    assert data["target_language"] == "SANTHALI"
+    assert data["acoustic_engine"] == "hi-IN"
+    assert data["speech_rate"] == 0.72
+    assert data["bilingual_relay"]["enabled"] is True
+    assert data["bilingual_relay"]["source_audio_pause_ms"] == 450
+    assert len(data["translated_text"]) > 0
+
+    # Test /api/v1/voice/translate with Ho language
+    ho_resp = client.post("/api/v1/voice/translate", json={
+        "hindi_transcript": "जल ही जीवन है",
+        "target_language": "HO"
+    })
+    assert ho_resp.status_code == 200
+    ho_data = ho_resp.json()
+    assert ho_data["target_language"] == "HO"
+    assert ho_data["script_type"] == "WARANG_CHITI"
+
+def test_fastapi_rag_cache_endpoints():
+    from fastapi.testclient import TestClient
+    from main import app
+    client = TestClient(app)
+
+    stats_resp = client.get("/api/v1/rag/cache-stats")
+    assert stats_resp.status_code == 200
+    stats = stats_resp.json()
+    assert "cache_hits" in stats
+    assert "cache_misses" in stats
+    assert "cache_size" in stats
+
+    clear_resp = client.post("/api/v1/rag/cache-clear")
+    assert clear_resp.status_code == 200
+    assert clear_resp.json()["status"] == "CLEARED"
+

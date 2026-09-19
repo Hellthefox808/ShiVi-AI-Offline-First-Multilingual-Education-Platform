@@ -6,7 +6,8 @@
     "build": "tsc",
     "start": "node dist/services/web-backend/src/main.js",
     "start:dev": "ts-node src/main.ts",
-    "test": "node -r ts-node/register --test test/**/*.spec.ts"
+    "test": "node -r ts-node/register --test test/**/*.spec.ts",
+    "test:stress": "node -r ts-node/register --test test/stress.spec.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

@@ -6,6 +6,7 @@ Preloaded with 15 Comprehensive JCERT Grades 1-5 Primary Curriculum Chunks with 
 """
 
 from typing import List, Dict, Any, Optional, Set, Tuple
+from collections import OrderedDict
 import math
 import re
 
@@ -412,6 +413,10 @@ class FineTunedHybridRagEngine:
         self.k1 = 1.5
         self.b = 0.75
         self.vector_dim = 128
+        self._cache_capacity = 500
+        self._query_cache: OrderedDict = OrderedDict()
+        self.cache_hits = 0
+        self.cache_misses = 0
         self._precompute_corpus_stats()
 
     def _tokenize(self, text: str) -> List[str]:
@@ -525,6 +530,22 @@ class FineTunedHybridRagEngine:
 
         return round(score, 4)
 
+    def get_cache_stats(self) -> Dict[str, Any]:
+        total = self.cache_hits + self.cache_misses
+        hit_ratio = round(self.cache_hits / max(1, total), 4)
+        return {
+            "cache_hits": self.cache_hits,
+            "cache_misses": self.cache_misses,
+            "cache_size": len(self._query_cache),
+            "cache_capacity": self._cache_capacity,
+            "hit_ratio": hit_ratio
+        }
+
+    def clear_cache(self):
+        self._query_cache.clear()
+        self.cache_hits = 0
+        self.cache_misses = 0
+
     def retrieve(
         self,
         query: str,
@@ -535,6 +556,23 @@ class FineTunedHybridRagEngine:
         competency_category: Optional[str] = None,
         top_k: int = 3
     ) -> List[Dict[str, Any]]:
+        cache_key = (
+            query.strip().lower(),
+            grade,
+            subject,
+            district.lower() if district else None,
+            bloom_level,
+            competency_category,
+            top_k
+        )
+
+        if cache_key in self._query_cache:
+            self.cache_hits += 1
+            cached_result = self._query_cache.pop(cache_key)
+            self._query_cache[cache_key] = cached_result
+            return cached_result
+
+        self.cache_misses += 1
         query_tokens = self._tokenize(query)
         query_vector = self._embed_text(query)
         
@@ -573,7 +611,7 @@ class FineTunedHybridRagEngine:
         scored_candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
         top_results = scored_candidates[:top_k]
 
-        return [
+        final_results = [
             {
                 "chunk": res["chunk"],
                 "bm25_score": res["bm25_score"],
@@ -596,5 +634,12 @@ class FineTunedHybridRagEngine:
             for res in top_results
         ]
 
+        if len(self._query_cache) >= self._cache_capacity:
+            self._query_cache.popitem(last=False)
+        self._query_cache[cache_key] = final_results
+
+        return final_results
+
 # Singleton instance
 rag_engine = FineTunedHybridRagEngine()
+

@@ -1,6 +1,8 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,14 +12,17 @@ import com.example.data.seed.PreloadedData
 import com.example.domain.model.*
 import com.example.ui.util.SpeechToTextManager
 import com.example.ui.util.TtsManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = (application as BhashaSetuApplication).repository
     val ttsManager = TtsManager(application)
     val sttManager = SpeechToTextManager(application)
     val isSpeaking: StateFlow<Boolean> = ttsManager.isSpeaking
+    val currentUtteranceId: StateFlow<String?> = ttsManager.currentUtteranceId
     val isListening: StateFlow<Boolean> = sttManager.isListening
     val speechRmsDb: StateFlow<Float> = sttManager.rmsDb
     val recognizedSpeech: StateFlow<String> = sttManager.recognizedText
@@ -27,9 +32,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var isVoiceSettingsOpen = MutableStateFlow(false)
         private set
 
+    init {
+        // Barge-in: When user starts speaking, immediately interrupt any active TTS playback
+        sttManager.onSpeechStartedListener = {
+            if (ttsManager.isSpeaking.value) {
+                ttsManager.interruptPlayback()
+            }
+        }
+    }
+
     // State flows from repository
     val allLessons: StateFlow<List<LessonEntity>> = repository.allLessons
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allWorksheets: StateFlow<List<WorksheetEntity>> = repository.allWorksheets
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PreloadedData.defaultWorksheets)
+
+    var activeWorksheet = MutableStateFlow<WorksheetEntity?>(null)
+        private set
+
+    var isGeneratingWorksheet = MutableStateFlow(false)
+        private set
+
+    var isWorksheetDialogVisible = MutableStateFlow(false)
+        private set
 
     val allFlashcards: StateFlow<List<FlashcardEntity>> = repository.allFlashcards
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -140,11 +166,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         VoiceTurn(
             id = "turn_0",
             isTeacher = true,
+            speakerRole = VoiceSpeakerRole.TEACHER,
             hindiText = "नमस्ते बच्चों! आज हम सब मिलकर साल के पेड़ के बारे में पढ़ेंगे।",
             targetText = "ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ! ᱛᱮᱦᱮᱧ ᱫᱚ ᱟᱵᱚ ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱮ ᱵᱟᱵᱚᱛ ᱵᱚᱱ ᱯᱟᱲᱦᱟᱣ-ᱟ᱾",
             scriptText = "ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ! (Johar gidra ko!)",
             transliteration = "Johar gidra ko! Teheny do abo sarjom dare babot bon padhaw-a.",
             transliterationDevanagari = "जोहार गिदरा को! तेहेञ दो आबो सारजोम दारे बाबोत बोन पाढ़ाव-आ।",
+            phoneticSyllables = listOf("जो-हार", "गिद-रा", "को", "ते-हेञ", "दो", "आ-बो", "सार-जोम", "दा-रे"),
             latencyMs = 1120L
         )
     ))
@@ -229,6 +257,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var isAuthSheetOpen = MutableStateFlow(false)
         private set
 
+    // App User Mode (Dual-Persona: Teacher vs Bal Sansar Student vs Community)
+    var appUserMode = MutableStateFlow(AppUserMode.TEACHER)
+        private set
+
+    // Student Flashcards & Practice Gamification
+    val studentFlashcards = MutableStateFlow(PreloadedData.defaultStudentFlashcards)
+    var selectedFlashcardCategory = MutableStateFlow<String?>(null)
+        private set
+    var studentStars = MutableStateFlow(120)
+        private set
+
+    // Classroom Quick Phrases
+    val classroomQuickPhrases = MutableStateFlow(PreloadedData.defaultClassroomQuickPhrases)
+
     // Gemini Chatbot State
     val chatMessages = MutableStateFlow<List<ChatMessage>>(listOf(
         ChatMessage(
@@ -251,6 +293,73 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     // Setters
+    fun setAppUserMode(mode: AppUserMode) { appUserMode.value = mode }
+    fun toggleAppUserMode() {
+        appUserMode.value = when (appUserMode.value) {
+            AppUserMode.TEACHER -> AppUserMode.STUDENT
+            AppUserMode.STUDENT -> AppUserMode.COMMUNITY
+            AppUserMode.COMMUNITY -> AppUserMode.TEACHER
+        }
+    }
+    fun setFlashcardCategory(category: String?) { selectedFlashcardCategory.value = category }
+
+    fun playFlashcardAudio(card: StudentFlashcard) {
+        val phonetic = when (selectedLanguage.value) {
+            TargetLanguage.SANTHALI -> card.devanagariPhonetic
+            TargetLanguage.HO -> card.hoDevanagari
+            TargetLanguage.MUNDARI -> card.mundariWord
+        }
+        ttsManager.speakTribalPhonetic(
+            devanagariPhonetic = phonetic,
+            fallbackText = card.hindiWord,
+            slowMode = true,
+            utteranceId = "fc_${card.id}"
+        )
+    }
+
+    fun triggerClassroomQuickPhrase(phrase: ClassroomQuickPhrase) {
+        val targetText: String
+        val scriptText: String
+        val phonetic: String
+
+        when (selectedLanguage.value) {
+            TargetLanguage.SANTHALI -> {
+                targetText = phrase.santhaliOlChiki
+                scriptText = phrase.santhaliOlChiki
+                phonetic = phrase.santhaliPhonetic
+            }
+            TargetLanguage.HO -> {
+                targetText = phrase.hoText
+                scriptText = phrase.hoText
+                phonetic = phrase.hoPhonetic
+            }
+            TargetLanguage.MUNDARI -> {
+                targetText = phrase.mundariText
+                scriptText = phrase.mundariText
+                phonetic = phrase.mundariText
+            }
+        }
+
+        val turn = VoiceTurn(
+            id = "qp_${System.currentTimeMillis()}",
+            isTeacher = true,
+            speakerRole = VoiceSpeakerRole.TEACHER,
+            hindiText = phrase.hindiText,
+            targetText = targetText,
+            scriptText = scriptText,
+            transliteration = phonetic,
+            transliterationDevanagari = phonetic,
+            phoneticSyllables = phonetic.split(" ", "-").filter { it.isNotBlank() },
+            latencyMs = 28L,
+            timestamp = System.currentTimeMillis()
+        )
+
+        voiceTurns.value = voiceTurns.value + turn
+
+        // Play bilingual relay automatically
+        playBilingualRelay(turn)
+    }
+
     fun setGrade(grade: GradeLevel) { selectedGrade.value = grade }
     fun setSubject(subject: SubjectArea) { selectedSubject.value = subject }
     fun setLanguage(lang: TargetLanguage) { selectedLanguage.value = lang }
@@ -312,6 +421,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 selectedCurriculumDetail.value = null
             }
         }
+    }
+
+    fun playCurriculumChunkAudio(chunk: CurriculumContentEntity) {
+        val phonetic = chunk.transliterationDevanagari.ifBlank { chunk.tribalLessonText.ifBlank { chunk.lessonTextHindi } }
+        ttsManager.speakTribalPhonetic(
+            devanagariPhonetic = phonetic,
+            fallbackText = chunk.lessonTextHindi,
+            slowMode = true,
+            utteranceId = "curr_${chunk.id}"
+        )
+    }
+
+    fun playCurriculumRelayAudio(chunk: CurriculumContentEntity) {
+        val phonetic = chunk.transliterationDevanagari.ifBlank { chunk.tribalLessonText.ifBlank { chunk.lessonTextHindi } }
+        ttsManager.speakBilingualRelay(
+            hindiSource = chunk.lessonTextHindi,
+            tribalDevanagari = phonetic,
+            utterancePrefix = "curr_relay_${chunk.id}"
+        )
     }
     
     // RAG Setters & Studio Bridging
@@ -435,21 +563,140 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun openWorksheet(worksheet: WorksheetEntity) {
+        activeWorksheet.value = worksheet
+        isWorksheetDialogVisible.value = true
+    }
+
+    fun closeWorksheetDialog() {
+        isWorksheetDialogVisible.value = false
+    }
+
+    fun generateWorksheetForLesson(lesson: LessonEntity) {
+        viewModelScope.launch {
+            isGeneratingWorksheet.value = true
+            try {
+                val worksheet = repository.generateBilingualWorksheet(lesson)
+                activeWorksheet.value = worksheet
+                isWorksheetDialogVisible.value = true
+            } catch (e: Exception) {
+                // Handled gracefully in repo
+            } finally {
+                isGeneratingWorksheet.value = false
+            }
+        }
+    }
+
+    fun approveWorksheet(worksheetId: String) {
+        viewModelScope.launch {
+            repository.approveWorksheet(worksheetId)
+            activeWorksheet.value = activeWorksheet.value?.copy(isApproved = true)
+        }
+    }
+
+    fun shareOrPrintWorksheet(worksheet: WorksheetEntity, context: Context) {
+        val questions = worksheet.parseQuestions()
+        val sb = StringBuilder()
+        sb.appendLine("==================================================")
+        sb.appendLine("  भाषासेतु AI (BhashaSetu AI) — द्विभाषी कार्यपत्रक")
+        sb.appendLine("==================================================")
+        sb.appendLine("शीर्षक (Title): ${worksheet.title}")
+        sb.appendLine("कक्षा (Grade): ${worksheet.grade}  |  मातृभाषा: ${worksheet.targetLanguage}")
+        sb.appendLine("दिनांक (Date): ____________  विद्यार्थी का नाम: _____________________")
+        sb.appendLine("अनुक्रमांक (Roll No): ________  विद्यालय: ___________________________")
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("निर्देश: ${worksheet.instructions}")
+        sb.appendLine("==================================================")
+        sb.appendLine()
+
+        questions.forEachIndexed { index, q ->
+            sb.appendLine("${index + 1}. [${q.type}] ${q.questionHindi}")
+            if (q.questionTarget.isNotBlank()) {
+                sb.appendLine("   👉 मातृभाषा (Native Script): ${q.questionTarget}")
+            }
+            if (q.options.isNotEmpty()) {
+                q.options.forEach { opt ->
+                    sb.appendLine("      $opt")
+                }
+            }
+            if (q.localContextHint.isNotBlank()) {
+                sb.appendLine("   💡 स्थानीय संदर्भ: ${q.localContextHint}")
+            }
+            sb.appendLine()
+        }
+
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("✅ उत्तर कुंजी (Teacher's Key):")
+        questions.forEachIndexed { index, q ->
+            sb.appendLine("  ${index + 1}. ${q.correctAnswer}")
+        }
+        sb.appendLine("==================================================")
+        sb.appendLine("BhashaSetu AI MTB-MLE Platform • Sarala Birla University")
+
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, sb.toString())
+            putExtra(Intent.EXTRA_SUBJECT, "BhashaSetu Worksheet - ${worksheet.title}")
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "कार्यपत्रक प्रिंट या साझा करें (Print / Share Worksheet)")
+        shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(shareIntent)
+    }
+
     fun sendVoiceUtterance(text: String) {
         if (text.isBlank()) return
         viewModelScope.launch {
-            val turn = repository.translateLiveVoiceTurn(text, selectedLanguage.value)
+            val role = voiceSettings.value.activeSpeakerRole
+            val turn = repository.translateLiveVoiceTurn(
+                hindiSpeechText = text,
+                targetLanguage = selectedLanguage.value,
+                speakerRole = role
+            )
             voiceTurns.value = voiceTurns.value + turn
             voiceInputText.value = ""
 
             if (voiceSettings.value.autoPlayOnTranslate) {
-                if (voiceSettings.value.isBilingualRelayEnabled) {
-                    playBilingualRelay(turn)
+                if (role == VoiceSpeakerRole.STUDENT) {
+                    playSourceHindi(turn)
                 } else {
-                    playTribalSpeech(turn, voiceSettings.value.isSlowClassroomMode)
+                    if (voiceSettings.value.isBilingualRelayEnabled) {
+                        playBilingualRelay(turn)
+                    } else {
+                        playTribalSpeech(turn, voiceSettings.value.isSlowClassroomMode)
+                    }
                 }
             }
         }
+    }
+
+    fun setVoiceSpeakerRole(role: VoiceSpeakerRole) {
+        voiceSettings.value = voiceSettings.value.copy(activeSpeakerRole = role)
+    }
+
+    fun toggleVoiceSpeakerRole() {
+        val nextRole = if (voiceSettings.value.activeSpeakerRole == VoiceSpeakerRole.TEACHER) {
+            VoiceSpeakerRole.STUDENT
+        } else {
+            VoiceSpeakerRole.TEACHER
+        }
+        setVoiceSpeakerRole(nextRole)
+    }
+
+    fun toggleFavoriteVoiceTurn(turnId: String) {
+        voiceTurns.value = voiceTurns.value.map {
+            if (it.id == turnId) it.copy(isFavorite = !it.isFavorite) else it
+        }
+    }
+
+    fun playSyllable(syllable: String) {
+        if (syllable.isBlank()) return
+        ttsManager.speakTribalPhonetic(
+            devanagariPhonetic = syllable,
+            fallbackText = syllable,
+            slowMode = true,
+            utteranceId = "syl_${System.currentTimeMillis()}"
+        )
     }
 
     fun openVoiceSettings(open: Boolean) {
@@ -492,6 +739,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sttManager.stopListening()
     }
 
+    fun clearVoiceTurns() {
+        voiceTurns.value = emptyList()
+    }
+
+    fun stopAudioPlayback() {
+        ttsManager.stop()
+    }
+
     fun playTribalSpeech(turn: VoiceTurn, slowMode: Boolean = false) {
         val phonetic = turn.transliterationDevanagari.ifBlank { turn.hindiText }
         ttsManager.speakTribalPhonetic(
@@ -506,7 +761,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val phonetic = turn.transliterationDevanagari.ifBlank { turn.targetText }
         ttsManager.speakBilingualRelay(
             hindiSource = turn.hindiText,
-            tribalDevanagari = phonetic
+            tribalDevanagari = phonetic,
+            utterancePrefix = "relay_${turn.id}"
         )
     }
 

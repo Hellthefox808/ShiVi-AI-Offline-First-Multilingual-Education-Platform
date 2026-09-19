@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -56,6 +57,7 @@ fun GeminiChatbotScreen(
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val glass = LocalGlassColors.current
 
     // Auto-scroll to bottom on new message
     LaunchedEffect(messages.size, isSending) {
@@ -94,7 +96,7 @@ fun GeminiChatbotScreen(
         // --- 1. Role / Persona Picker Banner ---
         GlassmorphicCard(
             shape = RoundedCornerShape(20.dp),
-            containerColor = GlassSurfaceLight,
+            containerColor = glass.surface,
             elevation = 2.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,7 +112,7 @@ fun GeminiChatbotScreen(
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primaryContainer,
-                            border = BorderStroke(1.dp, GlassBorderLight),
+                            border = BorderStroke(1.dp, glass.borderLight),
                             modifier = Modifier.size(36.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -179,14 +181,14 @@ fun GeminiChatbotScreen(
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = GlassSurfaceLight,
+                                containerColor = glass.surface,
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             border = FilterChipDefaults.filterChipBorder(
                                 enabled = true,
                                 selected = isSelected,
-                                borderColor = GlassBorderLight,
+                                borderColor = glass.borderLight,
                                 selectedBorderColor = MaterialTheme.colorScheme.primary
                             ),
                             modifier = Modifier.testTag("persona_chip_${persona.id}")
@@ -202,7 +204,7 @@ fun GeminiChatbotScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .border(BorderStroke(1.dp, GlassBorderLight), RoundedCornerShape(12.dp))
+                        .border(BorderStroke(1.dp, glass.borderLight), RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -295,8 +297,8 @@ fun GeminiChatbotScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(GlassSurfaceFloating)
-                                .border(BorderStroke(1.dp, GlassBorderLight), RoundedCornerShape(16.dp))
+                                .background(glass.surfaceFloating)
+                                .border(BorderStroke(1.dp, glass.borderLight), RoundedCornerShape(16.dp))
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
                             CircularProgressIndicator(
@@ -327,8 +329,8 @@ fun GeminiChatbotScreen(
                 items(quickPrompts) { prompt ->
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = GlassSurfaceLight,
-                        border = BorderStroke(1.dp, GlassBorderLight),
+                        color = glass.surface,
+                        border = BorderStroke(1.dp, glass.borderLight),
                         modifier = Modifier.clickable {
                             viewModel.sendChatMessage(prompt)
                         }
@@ -347,7 +349,7 @@ fun GeminiChatbotScreen(
         // --- 4. Bottom Input Bar (Glassmorphic) ---
         GlassmorphicCard(
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
-            containerColor = GlassSurfaceFloating,
+            containerColor = glass.surfaceFloating,
             elevation = 4.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -372,10 +374,10 @@ fun GeminiChatbotScreen(
                         .testTag("chat_message_input"),
                     shape = RoundedCornerShape(20.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = GlassSurfaceUltraLight,
-                        unfocusedContainerColor = GlassSurfaceUltraLight,
+                        focusedContainerColor = glass.surfaceUltraLight,
+                        unfocusedContainerColor = glass.surfaceUltraLight,
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = GlassBorderLight
+                        unfocusedBorderColor = glass.borderLight
                     ),
                     maxLines = 4
                 )
@@ -390,7 +392,7 @@ fun GeminiChatbotScreen(
                         .testTag("send_chat_message_button")
                 ) {
                     Icon(
-                        Icons.Default.Send,
+                        Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send Message",
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
@@ -408,6 +410,7 @@ fun ChatMessageBubble(
     modifier: Modifier = Modifier
 ) {
     val isUser = message.role == "user"
+    val glass = LocalGlassColors.current
     val timeFormatted = remember(message.timestamp) {
         SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(message.timestamp))
     }
@@ -420,7 +423,7 @@ fun ChatMessageBubble(
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.size(32.dp).padding(top = 2.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -437,8 +440,8 @@ fun ChatMessageBubble(
                 bottomStart = if (isUser) 18.dp else 4.dp,
                 bottomEnd = if (isUser) 4.dp else 18.dp
             ),
-            containerColor = if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.92f) else GlassSurfaceLight,
-            borderBrush = if (isUser) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.4f), Color.Transparent)) else Brush.linearGradient(listOf(GlassBorderHighlight, GlassBorderLight)),
+            containerColor = if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.92f) else glass.surface,
+            borderBrush = if (isUser) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.4f), Color.Transparent)) else Brush.linearGradient(listOf(glass.borderHighlight, glass.borderLight)),
             elevation = if (isUser) 2.dp else 2.dp,
             modifier = Modifier.widthIn(max = 320.dp)
         ) {
@@ -453,7 +456,7 @@ fun ChatMessageBubble(
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                            border = BorderStroke(1.dp, GlassBorderLight)
+                            border = BorderStroke(1.dp, glass.borderLight)
                         ) {
                             Text(
                                 text = message.modelUsed?.substringBefore("-preview") ?: "Gemini 3.5 Flash",
@@ -468,7 +471,7 @@ fun ChatMessageBubble(
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.tertiaryContainer,
-                                border = BorderStroke(1.dp, GlassBorderLight)
+                                border = BorderStroke(1.dp, glass.borderLight)
                             ) {
                                 Text(
                                     text = "🌐 Google Search",
@@ -512,7 +515,7 @@ fun ChatMessageBubble(
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.VolumeUp,
+                                    Icons.AutoMirrored.Filled.VolumeUp,
                                     contentDescription = "Speak Text",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
@@ -541,7 +544,7 @@ fun ChatMessageBubble(
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.secondaryContainer,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.size(32.dp).padding(top = 2.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {

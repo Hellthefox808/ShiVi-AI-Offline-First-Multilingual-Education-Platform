@@ -41,7 +41,7 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             isInitialized = true
-            tts?.language = Locale("hi", "IN")
+            tts?.language = Locale.forLanguageTag("hi-IN")
             tts?.setPitch(currentPitch)
             tts?.setSpeechRate(currentSpeechRate)
 
@@ -104,7 +104,7 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
             if (languageCode.equals("en", ignoreCase = true)) {
                 tts?.language = Locale.ENGLISH
             } else {
-                tts?.language = Locale("hi", "IN")
+                tts?.language = Locale.forLanguageTag("hi-IN")
             }
 
             tts?.setPitch(currentPitch)
@@ -143,16 +143,17 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
     fun speakBilingualRelay(
         hindiSource: String,
         tribalDevanagari: String,
+        utterancePrefix: String = "relay_${System.currentTimeMillis()}",
         onComplete: (() -> Unit)? = null
     ) {
         if (!isInitialized || tts == null) return
         stop()
 
-        val relayId1 = "relay_hi_${System.currentTimeMillis()}"
-        val relayId2 = "relay_tr_${System.currentTimeMillis()}"
+        val relayId1 = "${utterancePrefix}_hi"
+        val relayId2 = "${utterancePrefix}_tr"
 
         try {
-            tts?.language = Locale("hi", "IN")
+            tts?.language = Locale.forLanguageTag("hi-IN")
             tts?.setPitch(currentPitch)
             tts?.setSpeechRate(currentSpeechRate)
 
@@ -180,6 +181,23 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
             tts?.stop()
         } catch (e: Exception) {
             Log.e("TtsManager", "Error stopping TTS: ${e.message}")
+        } finally {
+            _isSpeaking.value = false
+            _currentUtteranceId.value = null
+        }
+    }
+
+    /**
+     * Barge-in interruption: Immediately cancels ongoing speech synthesis, clears all queued
+     * utterances and pauses, and resets playback state.
+     */
+    fun interruptPlayback() {
+        try {
+            mainHandler.removeCallbacksAndMessages(null)
+            tts?.stop()
+            Log.d("TtsManager", "Playback interrupted (barge-in active)")
+        } catch (e: Exception) {
+            Log.e("TtsManager", "Error interrupting TTS: ${e.message}")
         } finally {
             _isSpeaking.value = false
             _currentUtteranceId.value = null

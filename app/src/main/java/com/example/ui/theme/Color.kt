@@ -3,84 +3,121 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // ==========================================
-// Light Coffee & Frosted Glass Palette
+// BhashaSetu Collective Design System (Stitch)
+// Brand Identity: Institutional Authority, Technological Precision, Educational Clarity
 // ==========================================
 
-// Primary - Rich Espresso Roast / Warm Dark Caramel
-val CoffeePrimary = Color(0xFF6F4E37)
-val CoffeeOnPrimary = Color(0xFFFFFFFF)
-val CoffeePrimaryContainer = Color(0xFFEDE0D4)  // Warm Steamed Milk / Cappuccino Foam
-val CoffeeOnPrimaryContainer = Color(0xFF331B0D)
+// Primary - Deep Navy (Institutional Authority & Structure)
+val BhashaNavyPrimary = Color(0xFF0F172A)
+val BhashaOnPrimary = Color(0xFFFFFFFF)
+val BhashaPrimaryContainer = Color(0xFF1E293B)
+val BhashaOnPrimaryContainer = Color(0xFFE2E8F0)
 
-// Secondary - Warm Terracotta Cinnamon / Caramel Mocha
-val CoffeeSecondary = Color(0xFF8D5B4C)
-val CoffeeOnSecondary = Color(0xFFFFFFFF)
-val CoffeeSecondaryContainer = Color(0xFFF5EBE1)  // Creamy Macchiato Froth
-val CoffeeOnSecondaryContainer = Color(0xFF381F13)
+// Secondary - Educational Teal (Action, FLN Progress & Interactivity)
+val BhashaTealSecondary = Color(0xFF0D9488)
+val BhashaOnSecondary = Color(0xFFFFFFFF)
+val BhashaSecondaryContainer = Color(0xFF86F2E4)
+val BhashaOnSecondaryContainer = Color(0xFF006F66)
 
-// Tertiary - Roasted Hazelnut / Warm Pecan
-val CoffeeTertiary = Color(0xFF9C6644)
-val CoffeeOnTertiary = Color(0xFFFFFFFF)
-val CoffeeTertiaryContainer = Color(0xFFEBD8C8)  // Warm Biscuit Foam
-val CoffeeOnTertiaryContainer = Color(0xFF3C200B)
+// Tertiary - Slate Neutral (Data, Metrics & Precision)
+val BhashaSlateTertiary = Color(0xFF334155)
+val BhashaOnTertiary = Color(0xFFFFFFFF)
+val BhashaTertiaryContainer = Color(0xFF0D1C2F)
+val BhashaOnTertiaryContainer = Color(0xFF76859B)
 
-// Surface & Background (Light Coffee Aesthetic)
-val CoffeeBackgroundLight = Color(0xFFFAF6F0)        // Warm Café Au Lait Canvas
-val CoffeeSurfaceLight = Color(0xFFFFFDF9)           // Pure Cream Surface
-val CoffeeSurfaceVariantLight = Color(0xFFF1E7DD)    // Frosted Oat Milk Tint
-val CoffeeOutlineLight = Color(0xFFBAA495)           // Warm Mocha Outline
-val CoffeeOutlineVariantLight = Color(0xFFE2D6CB)    // Subtle Foam Outline
-val CoffeeTextPrimaryLight = Color(0xFF281C14)       // Dark Roasted Coffee Bean Text
-val CoffeeTextSecondaryLight = Color(0xFF624F43)     // Muted Warm Mocha Text
-val CoffeeTextTertiaryLight = Color(0xFF8C796C)      // Soft Latte Subtitle Text
+// Surface & Background (Light Mode - Clean Academic Canvas)
+val BhashaBackgroundLight = Color(0xFFF7F9FB)
+val BhashaSurfaceLight = Color(0xFFFFFFFF)
+val BhashaSurfaceContainerLowest = Color(0xFFFFFFFF)
+val BhashaSurfaceContainerLow = Color(0xFFF2F4F6)
+val BhashaSurfaceContainer = Color(0xFFECEEF0)
+val BhashaSurfaceContainerHigh = Color(0xFFE6E8EA)
+val BhashaSurfaceContainerHighest = Color(0xFFE0E3E5)
+val BhashaSurfaceVariantLight = Color(0xFFE0E3E5)
+val BhashaOutlineLight = Color(0xFFCBD5E1)
+val BhashaOutlineVariantLight = Color(0xFFE2E8F0)
+val BhashaTextPrimaryLight = Color(0xFF191C1E)
+val BhashaTextSecondaryLight = Color(0xFF45464D)
+val BhashaTextTertiaryLight = Color(0xFF76777D)
 
-// Glassmorphism Spec & Translucent Tints (Light Coffee)
-val GlassSurfaceLight = Color(0xCCFFFDF9)            // 80% Translucent Frosted Milk Glass
-val GlassSurfaceTinted = Color(0xD9FAF4EC)           // 85% Translucent Light Coffee Tint
-val GlassSurfaceUltraLight = Color(0x99FFFDF9)       // 60% Translucent Frosted Glass
-val GlassSurfaceFloating = Color(0xE6FFFDF9)         // 90% Translucent Floating Element
-val GlassBorderLight = Color(0x59BAA495)             // Translucent Mocha Hairline
-val GlassBorderHighlight = Color(0x99FFFFFF)         // Frosted White Edge Glow
-val GlassSurfaceDark = Color(0xB3241C16)             // Translucent Dark Roast Glass
-val GlassBorderDark = Color(0x40D5C3B2)
+// Dark Mode Palette (Midnight Slate & Luminous Teal)
+val BhashaBackgroundDark = Color(0xFF0B1120)
+val BhashaSurfaceDark = Color(0xFF0F172A)
+val BhashaSurfaceVariantDark = Color(0xFF1E293B)
+val BhashaPrimaryDark = Color(0xFF38BDF8)
+val BhashaOnPrimaryDark = Color(0xFF0B1120)
+val BhashaPrimaryContainerDark = Color(0xFF1E293B)
+val BhashaOnPrimaryContainerDark = Color(0xFFE2E8F0)
 
-// Dark Coffee Palette (Dark Roast / Mocha Espresso)
-val CoffeePrimaryDark = Color(0xFFDDB892)
-val CoffeeOnPrimaryDark = Color(0xFF3D2314)
-val CoffeePrimaryContainerDark = Color(0xFF553928)
-val CoffeeOnPrimaryContainerDark = Color(0xFFEDE0D4)
+val BhashaSecondaryDark = Color(0xFF2DD4BF)
+val BhashaOnSecondaryDark = Color(0xFF003833)
+val BhashaSecondaryContainerDark = Color(0xFF134E4A)
+val BhashaOnSecondaryContainerDark = Color(0xFF86F2E4)
 
-val CoffeeSecondaryDark = Color(0xFFCCA785)
-val CoffeeOnSecondaryDark = Color(0xFF3B2414)
-val CoffeeSecondaryContainerDark = Color(0xFF614435)
-val CoffeeOnSecondaryContainerDark = Color(0xFFF5EBE1)
+val BhashaTertiaryDark = Color(0xFF94A3B8)
+val BhashaOnTertiaryDark = Color(0xFF0F172A)
+val BhashaTertiaryContainerDark = Color(0xFF0D1C2F)
+val BhashaOnTertiaryContainerDark = Color(0xFF76859B)
 
-val CoffeeTertiaryDark = Color(0xFFE6BEA2)
-val CoffeeOnTertiaryDark = Color(0xFF452611)
-val CoffeeTertiaryContainerDark = Color(0xFF6B4731)
-val CoffeeOnTertiaryContainerDark = Color(0xFFEBD8C8)
+val BhashaOutlineDark = Color(0xFF334155)
+val BhashaOutlineVariantDark = Color(0xFF1E293B)
+val BhashaTextPrimaryDark = Color(0xFFF8FAFC)
+val BhashaTextSecondaryDark = Color(0xFF94A3B8)
 
-val CoffeeBackgroundDark = Color(0xFF19120D)
-val CoffeeSurfaceDark = Color(0xFF231B15)
-val CoffeeSurfaceVariantDark = Color(0xFF342921)
-val CoffeeOutlineDark = Color(0xFF8F7B6D)
-val CoffeeOutlineVariantDark = Color(0xFF4F4035)
-val CoffeeTextPrimaryDark = Color(0xFFF6ECE1)
-val CoffeeTextSecondaryDark = Color(0xFFD3C2B3)
+// Atmospheric Canvas Tones (Subtle Educational Refraction Backdrop)
+val BhashaAtmosphereTop = Color(0xFFF1F5F9)
+val BhashaAtmosphereMid = Color(0xFFF8FAFC)
+val BhashaAtmosphereBottom = Color(0xFFEDF2F7)
+val BhashaAtmosphereTeal = Color(0x140D9488)
+val BhashaAtmosphereNavy = Color(0x0F0F172A)
 
-// Ambient Canvas Gradients (for glass refraction backdrop)
-val CoffeeAmbientTop = Color(0xFFF6EFE6)
-val CoffeeAmbientMid = Color(0xFFFAF6F0)
-val CoffeeAmbientBottom = Color(0xFFF2E8DC)
-val CoffeeGlowWarm = Color(0x2EE6CCB2)
-val CoffeeGlowMocha = Color(0x26B08968)
+// Status & Tribal Language Accent Colors (Grounding & Cultural Precision)
+val SanthaliAccent = Color(0xFF0D9488)   // Educational Teal (Ol Chiki)
+val HoAccent = Color(0xFFC2410C)         // Warm Terracotta Ochre (Warang Chiti)
+val MundariAccent = Color(0xFFB91C1C)    // Earthy Crimson (Devanagari / Nag Mundari)
+val SuccessGreen = Color(0xFF16A34A)     // Verified Emerald Green
+val WarningAmber = Color(0xFFD97706)     // High-contrast Warm Amber
+val ErrorRed = Color(0xFFBA1A1A)         // Deep Crimson Alert
 
-// Status & Tribal Language Accent Colors (Tuned to Light Coffee Theme)
-val SanthaliAccent = Color(0xFF246880)   // Deep Slate Teal (Harmonizes with Warm Coffee)
-val HoAccent = Color(0xFF8B4D24)         // Warm Caramel Amber Roast
-val MundariAccent = Color(0xFFA63C2C)    // Spiced Terracotta Brick
-val SuccessGreen = Color(0xFF2C7D47)     // Forest Sage Green
-val WarningAmber = Color(0xFFC76A00)     // Caramel Amber
-val ErrorRed = Color(0xFFB52B1E)         // Deep Crimson Bean
+// ==========================================
+// Theme-Aware Glass Colors for Glassmorphism
+// ==========================================
 
+// Standalone Glass Tokens (Stitch Crisp Academic Glass)
+val GlassSurfaceLight = Color(0xE6FFFFFF)           // 90% Pure White Glass
+val GlassSurfaceTinted = Color(0xF2F8FAFC)          // 95% Soft Neutral Glass
+val GlassSurfaceUltraLight = Color(0xB3FFFFFF)      // 70% Translucent Glass
+val GlassSurfaceFloating = Color(0xF8FFFFFF)        // 97% Floating Card Surface
+val GlassBorderLight = Color(0x60CBD5E1)            // Soft 1dp hairline border
+val GlassBorderHighlight = Color(0xCCFFFFFF)        // Crisp top edge highlight
+
+val GlassSurfaceDark = Color(0xCC0F172A)            // 80% Midnight Navy Glass
+val GlassBorderDark = Color(0x40475569)             // Muted Dark Slate Hairline
+
+data class GlassColors(
+    val surface: Color,
+    val surfaceTinted: Color,
+    val surfaceUltraLight: Color,
+    val surfaceFloating: Color,
+    val borderLight: Color,
+    val borderHighlight: Color
+)
+
+val GlassColorsLight = GlassColors(
+    surface = GlassSurfaceLight,
+    surfaceTinted = GlassSurfaceTinted,
+    surfaceUltraLight = GlassSurfaceUltraLight,
+    surfaceFloating = GlassSurfaceFloating,
+    borderLight = GlassBorderLight,
+    borderHighlight = GlassBorderHighlight
+)
+
+val GlassColorsDark = GlassColors(
+    surface = GlassSurfaceDark,
+    surfaceTinted = Color(0xE61E293B),     // 90% Slate Container Glass
+    surfaceUltraLight = Color(0x990F172A), // 60% Translucent Dark Glass
+    surfaceFloating = Color(0xF20F172A),   // 95% Floating Midnight Surface
+    borderLight = GlassBorderDark,
+    borderHighlight = Color(0x3094A3B8)    // Soft Edge Glow
+)
 

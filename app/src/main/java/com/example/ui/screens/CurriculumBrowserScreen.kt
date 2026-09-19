@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -30,9 +31,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.CurriculumContentEntity
 import com.example.domain.model.TargetLanguage
-import com.example.ui.components.GlassmorphicCard
-import com.example.ui.components.GlassmorphicSurface
-import com.example.ui.components.SectionHeader
+import com.example.ui.components.*
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.MainViewModel
 import java.util.UUID
@@ -53,15 +52,28 @@ fun CurriculumBrowserScreen(
     val selectedSubjectFilter by viewModel.selectedCurriculumSubjectFilter.collectAsState()
     val selectedDetailChunk by viewModel.selectedCurriculumDetail.collectAsState()
     val isAddSheetOpen by viewModel.isAddCurriculumSheetOpen.collectAsState()
+    val glass = LocalGlassColors.current
+    val isSpeaking by viewModel.isSpeaking.collectAsState()
+    val currentUtteranceId by viewModel.ttsManager.currentUtteranceId.collectAsState()
 
     var chunkToDelete by remember { mutableStateOf<CurriculumContentEntity?>(null) }
 
     // Detail Modal Sheet
     if (selectedDetailChunk != null) {
+        val detailChunk = selectedDetailChunk!!
+        val isDetailPlaying = isSpeaking && (currentUtteranceId?.startsWith("curr_${detailChunk.id}") == true || currentUtteranceId?.startsWith("curr_relay_${detailChunk.id}") == true)
         CurriculumDetailModal(
-            chunk = selectedDetailChunk!!,
-            onDismiss = { viewModel.openCurriculumDetail(null) },
+            chunk = detailChunk,
+            isPlaying = isDetailPlaying,
+            onPlayAudio = { viewModel.playCurriculumChunkAudio(it) },
+            onPlayRelay = { viewModel.playCurriculumRelayAudio(it) },
+            onStopAudio = { viewModel.stopAudioPlayback() },
+            onDismiss = {
+                viewModel.stopAudioPlayback()
+                viewModel.openCurriculumDetail(null)
+            },
             onLoadIntoStudio = {
+                viewModel.stopAudioPlayback()
                 viewModel.loadCurriculumChunkIntoLessonStudio(it)
                 viewModel.openCurriculumDetail(null)
                 Toast.makeText(context, "पाठ स्टूडियो में लोड किया गया!", Toast.LENGTH_SHORT).show()
@@ -115,20 +127,23 @@ fun CurriculumBrowserScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(top = 12.dp, bottom = 40.dp)
     ) {
-        // 1. Glassmorphic Hero Banner
+        // 1. Stitch Hero Banner (BhashaSetu Collective Pattern)
         item {
             GlassmorphicCard(
-                containerColor = CoffeePrimary.copy(alpha = 0.94f),
+                containerColor = BhashaNavyPrimary,
                 borderBrush = Brush.linearGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.5f),
-                        CoffeePrimaryContainer.copy(alpha = 0.3f)
+                        BhashaTealSecondary.copy(alpha = 0.75f),
+                        Color.White.copy(alpha = 0.25f),
+                        BhashaNavyPrimary
                     )
                 ),
                 elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    // Top Row: Brand Avatar & Verified Status Pill
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -139,14 +154,14 @@ fun CurriculumBrowserScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Surface(
-                                shape = CircleShape,
-                                color = Color.White.copy(alpha = 0.22f),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
-                                modifier = Modifier.size(44.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                color = BhashaTealSecondary.copy(alpha = 0.22f),
+                                border = BorderStroke(1.dp, BhashaTealSecondary.copy(alpha = 0.5f)),
+                                modifier = Modifier.size(46.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = Icons.Default.LibraryBooks,
+                                        imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
                                         contentDescription = "Curriculum Library",
                                         tint = Color.White,
                                         modifier = Modifier.size(24.dp)
@@ -163,31 +178,47 @@ fun CurriculumBrowserScreen(
                                 Text(
                                     text = "JCERT / NCERT Grounded • On-Device Room DB",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.9f)
+                                    color = Color.White.copy(alpha = 0.82f)
                                 )
                             }
                         }
 
-                        // Add Local Curriculum Action
-                        FilledTonalButton(
-                            onClick = { viewModel.openAddCurriculumSheet(true) },
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = Color.White.copy(alpha = 0.25f),
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                            modifier = Modifier.testTag("add_custom_curriculum_btn")
+                        // Stitch Verified Status Pill
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = BhashaTealSecondary.copy(alpha = 0.2f),
+                            border = BorderStroke(1.dp, BhashaTealSecondary.copy(alpha = 0.45f))
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.AddCircleOutline,
-                                contentDescription = "Add",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "नया पाठ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = "Verified",
+                                    tint = BhashaSecondaryContainer,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = "समीक्षा रेडी",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BhashaSecondaryContainer,
+                                    fontSize = 10.sp
+                                )
+                            }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "मातृभाषा आधारित प्राथमिक शिक्षा (MTB-MLE) के लिए स्थानीय आदिवासी पाठ्य सामग्री। शत-प्रतिशत ऑफलाइन संथाली, हो और मुण्डारी पाठ्यक्रम।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.88f),
+                        lineHeight = 18.sp
+                    )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -196,91 +227,61 @@ fun CurriculumBrowserScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color.White.copy(alpha = 0.15f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                        StitchStatMetric(
+                            value = "${allCurriculum.size}",
+                            label = "कुल पाठ (Room DB)",
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "${allCurriculum.size}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "कुल पाठ (Room DB)",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    maxLines = 1
-                                )
-                            }
-                        }
+                        )
+                        StitchStatMetric(
+                            value = "3 बोलियाँ",
+                            label = "संथाली • हो • मुण्डारी",
+                            modifier = Modifier.weight(1f)
+                        )
+                        StitchStatMetric(
+                            value = "100%",
+                            label = "ऑफलाइन कैश",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color.White.copy(alpha = 0.15f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "3 बोलियाँ",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "संथाली • हो • मुण्डारी",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    maxLines = 1
-                                )
-                            }
-                        }
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color.White.copy(alpha = 0.15f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "100%",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "ऑफलाइन कैश",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    maxLines = 1
-                                )
-                            }
-                        }
+                    // Add Local Curriculum Action Button
+                    Button(
+                        onClick = { viewModel.openAddCurriculumSheet(true) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BhashaTealSecondary,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("add_custom_curriculum_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AddCircleOutline,
+                            contentDescription = "Add",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "नया स्थानीय पाठ जोड़ें (Add Custom Lesson)",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         }
 
-        // 2. Search Box with Glassmorphic Translucency
+        // 2. Search & Filter Card with Stitch Design System
         item {
             GlassmorphicCard(
-                containerColor = GlassSurfaceFloating,
-                borderBrush = Brush.linearGradient(listOf(GlassBorderHighlight, GlassBorderLight)),
+                containerColor = glass.surfaceFloating,
+                borderBrush = Brush.linearGradient(listOf(glass.borderHighlight, glass.borderLight)),
                 elevation = 2.dp,
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -291,14 +292,14 @@ fun CurriculumBrowserScreen(
                             Text(
                                 "पाठ, विषय, या Ol Chiki शब्द खोजें (e.g. साल, ᱫᱟᱨᱮ, गिनती)...",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CoffeeTextSecondaryLight
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.secondary
                             )
                         },
                         trailingIcon = {
@@ -307,31 +308,31 @@ fun CurriculumBrowserScreen(
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Clear",
-                                        tint = CoffeeTextSecondaryLight
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = GlassSurfaceLight,
-                            unfocusedContainerColor = GlassSurfaceLight,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = GlassBorderLight
+                            focusedContainerColor = glass.surfaceUltraLight,
+                            unfocusedContainerColor = glass.surfaceUltraLight,
+                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            unfocusedBorderColor = glass.borderLight
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("curriculum_search_input")
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Language Filter Chips
                     Text(
                         text = "मातृभाषा फ़िल्टर (Language Filter):",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -344,7 +345,7 @@ fun CurriculumBrowserScreen(
                                 selected = selectedLanguageFilter == null,
                                 onClick = { viewModel.setCurriculumLanguageFilter(null) },
                                 label = { Text("सभी बोलियाँ (All)") },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -352,7 +353,7 @@ fun CurriculumBrowserScreen(
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = selectedLanguageFilter == null,
-                                    borderColor = GlassBorderLight,
+                                    borderColor = glass.borderLight,
                                     selectedBorderColor = MaterialTheme.colorScheme.primary
                                 ),
                                 modifier = Modifier.testTag("filter_lang_all")
@@ -369,15 +370,15 @@ fun CurriculumBrowserScreen(
                                 selected = isSelected,
                                 onClick = { viewModel.setCurriculumLanguageFilter(if (isSelected) null else lang.name) },
                                 label = { Text("${lang.displayName} (${lang.nativeName})") },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = accent.copy(alpha = 0.2f),
+                                    selectedContainerColor = accent.copy(alpha = 0.18f),
                                     selectedLabelColor = accent
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = isSelected,
-                                    borderColor = GlassBorderLight,
+                                    borderColor = glass.borderLight,
                                     selectedBorderColor = accent
                                 ),
                                 modifier = Modifier.testTag("filter_lang_${lang.code}")
@@ -385,13 +386,13 @@ fun CurriculumBrowserScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Grade Filter Chips
                     Text(
                         text = "कक्षा स्तर (Grade Level):",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -405,7 +406,7 @@ fun CurriculumBrowserScreen(
                                 selected = selectedGradeFilter == null,
                                 onClick = { viewModel.setCurriculumGradeFilter(null) },
                                 label = { Text("सभी कक्षाएँ") },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -413,7 +414,7 @@ fun CurriculumBrowserScreen(
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = selectedGradeFilter == null,
-                                    borderColor = GlassBorderLight,
+                                    borderColor = glass.borderLight,
                                     selectedBorderColor = MaterialTheme.colorScheme.primary
                                 )
                             )
@@ -424,7 +425,7 @@ fun CurriculumBrowserScreen(
                                 selected = isSelected,
                                 onClick = { viewModel.setCurriculumGradeFilter(if (isSelected) null else "Grade $gradeNum") },
                                 label = { Text("कक्षा $gradeNum") },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -432,20 +433,20 @@ fun CurriculumBrowserScreen(
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = isSelected,
-                                    borderColor = GlassBorderLight,
+                                    borderColor = glass.borderLight,
                                     selectedBorderColor = MaterialTheme.colorScheme.secondary
                                 )
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Subject Area Filter Chips
                     Text(
-                        text = "विषय (Subject Area):",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "विषय क्षेत्र (Subject Focus):",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -464,7 +465,7 @@ fun CurriculumBrowserScreen(
                                 selected = selectedSubjectFilter == null,
                                 onClick = { viewModel.setCurriculumSubjectFilter(null) },
                                 label = { Text("सभी विषय") },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -472,7 +473,7 @@ fun CurriculumBrowserScreen(
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = selectedSubjectFilter == null,
-                                    borderColor = GlassBorderLight,
+                                    borderColor = glass.borderLight,
                                     selectedBorderColor = MaterialTheme.colorScheme.primary
                                 )
                             )
@@ -483,7 +484,7 @@ fun CurriculumBrowserScreen(
                                 selected = isSelected,
                                 onClick = { viewModel.setCurriculumSubjectFilter(if (isSelected) null else key) },
                                 label = { Text(label) },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer
@@ -491,7 +492,7 @@ fun CurriculumBrowserScreen(
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = isSelected,
-                                    borderColor = GlassBorderLight,
+                                    borderColor = glass.borderLight,
                                     selectedBorderColor = MaterialTheme.colorScheme.tertiary
                                 )
                             )
@@ -501,17 +502,15 @@ fun CurriculumBrowserScreen(
                     // Reset Filters row if active
                     val hasActiveFilters = searchQuery.isNotBlank() || selectedLanguageFilter != null || selectedGradeFilter != null || selectedSubjectFilter != null
                     if (hasActiveFilters) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "${curriculumList.size} पाठ मिले",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                            StitchStatusDotBadge(
+                                label = "${curriculumList.size} पाठ मिले",
+                                statusColor = MaterialTheme.colorScheme.secondary
                             )
                             TextButton(
                                 onClick = { viewModel.resetCurriculumFilters() },
@@ -519,7 +518,7 @@ fun CurriculumBrowserScreen(
                             ) {
                                 Icon(Icons.Default.Refresh, contentDescription = "Reset", modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("फ़िल्टर रीसेट करें", fontSize = 12.sp)
+                                Text("फ़िल्टर रीसेट करें", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -527,12 +526,12 @@ fun CurriculumBrowserScreen(
             }
         }
 
-        // 3. Section Title & List
+        // 3. Section Title & Counter
         item {
             SectionHeader(
                 title = "स्थानीय पाठ्य सामग्री सूची (${curriculumList.size})",
                 subtitle = "कक्षा में शिक्षण हेतु सीधे पाठ स्टूडियो में लोड करें या विस्तार से पढ़ें",
-                icon = Icons.Default.MenuBook
+                icon = Icons.AutoMirrored.Filled.MenuBook
             )
         }
 
@@ -540,7 +539,8 @@ fun CurriculumBrowserScreen(
         if (curriculumList.isEmpty()) {
             item {
                 GlassmorphicCard(
-                    containerColor = GlassSurfaceLight,
+                    containerColor = glass.surface,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -552,7 +552,7 @@ fun CurriculumBrowserScreen(
                         Icon(
                             imageVector = Icons.Default.SearchOff,
                             contentDescription = "No Curriculum Found",
-                            tint = CoffeeTextSecondaryLight,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
@@ -565,23 +565,33 @@ fun CurriculumBrowserScreen(
                         Text(
                             text = "कृपया अपने खोज शब्द या फ़िल्टर बदलें, अथवा नया स्थानीय पाठ जोड़ें।",
                             style = MaterialTheme.typography.bodySmall,
-                            color = CoffeeTextSecondaryLight,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = { viewModel.resetCurriculumFilters() },
-                            shape = RoundedCornerShape(12.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("सभी पाठ देखें")
+                            Text("सभी पाठ देखें", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         } else {
             items(curriculumList, key = { it.id }) { chunk ->
+                val isChunkPlaying = isSpeaking && currentUtteranceId?.startsWith("curr_${chunk.id}") == true
                 CurriculumChunkCard(
                     chunk = chunk,
+                    isPlaying = isChunkPlaying,
+                    onPlayAudio = {
+                        if (isChunkPlaying) {
+                            viewModel.stopAudioPlayback()
+                        } else {
+                            viewModel.playCurriculumChunkAudio(chunk)
+                        }
+                    },
                     onOpenDetail = { viewModel.openCurriculumDetail(chunk) },
                     onLoadIntoStudio = {
                         viewModel.loadCurriculumChunkIntoLessonStudio(chunk)
@@ -597,6 +607,7 @@ fun CurriculumBrowserScreen(
 
 /**
  * Interactive Glassmorphic Card for displaying an individual curriculum entity from Room DB.
+ * Styled with Stitch 'BhashaSetu Collective' design tokens.
  */
 @Composable
 fun CurriculumChunkCard(
@@ -604,8 +615,11 @@ fun CurriculumChunkCard(
     onOpenDetail: () -> Unit,
     onLoadIntoStudio: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPlaying: Boolean = false,
+    onPlayAudio: () -> Unit = {}
 ) {
+    val glass = LocalGlassColors.current
     val langAccent = when (chunk.tribalLanguage.uppercase()) {
         "SANTHALI" -> SanthaliAccent
         "HO" -> HoAccent
@@ -614,12 +628,13 @@ fun CurriculumChunkCard(
     }
 
     GlassmorphicCard(
-        containerColor = GlassSurfaceFloating,
+        containerColor = glass.surfaceFloating,
+        shape = RoundedCornerShape(14.dp),
         borderBrush = Brush.linearGradient(
             listOf(
-                GlassBorderHighlight,
-                langAccent.copy(alpha = 0.35f),
-                GlassBorderLight
+                if (isPlaying) langAccent else glass.borderHighlight,
+                langAccent.copy(alpha = if (isPlaying) 0.85f else 0.35f),
+                if (isPlaying) langAccent.copy(alpha = 0.5f) else glass.borderLight
             )
         ),
         elevation = 3.dp,
@@ -629,7 +644,7 @@ fun CurriculumChunkCard(
             .testTag("curriculum_card_${chunk.id}")
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row: Grade, Chapter, Language Badge, and Outcome Pill
+            // Header Row: Category / Grade Tag on Left, Status Dot Badge on Right
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -637,79 +652,64 @@ fun CurriculumChunkCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Grade & Subject Pill
+                    // Subject Avatar Container
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        border = BorderStroke(1.dp, GlassBorderLight)
+                        shape = RoundedCornerShape(10.dp),
+                        color = langAccent.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, langAccent.copy(alpha = 0.35f)),
+                        modifier = Modifier.size(38.dp)
                     ) {
-                        Text(
-                            text = "${chunk.grade} • अध्याय ${chunk.chapterNumber}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                contentDescription = chunk.subject,
+                                tint = langAccent,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
-                    // Target Language Pill
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = langAccent.copy(alpha = 0.15f),
-                        border = BorderStroke(1.dp, langAccent.copy(alpha = 0.4f))
-                    ) {
+                    Column {
                         Text(
-                            text = chunk.tribalLanguage,
+                            text = "${chunk.curriculumBoard} • ${chunk.grade.uppercase()} • CH ${chunk.chapterNumber}",
                             style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = chunk.chapterTitle,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = langAccent,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
 
-                // JCERT Outcome Code Pill
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = SuccessGreen.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.35f))
-                ) {
-                    Text(
-                        text = chunk.learningOutcomeCode,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = SuccessGreen,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                // Stitch Status Dot Badge
+                StitchStatusDotBadge(
+                    label = "Room DB रेडी",
+                    statusColor = BhashaTealSecondary
+                )
             }
+
+            Text(
+                text = "प्रकरण: ${chunk.topic}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 4.dp, start = 46.dp)
+            )
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Chapter Title & Topic
-            Text(
-                text = chunk.chapterTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = chunk.topic,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 2.dp)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Hindi Lesson Text Preview
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = GlassSurfaceLight,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                shape = RoundedCornerShape(10.dp),
+                color = glass.surface,
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(10.dp)) {
@@ -717,8 +717,9 @@ fun CurriculumChunkCard(
                         text = "हिन्दी मुख्य पाठ:",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = CoffeeTextSecondaryLight
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = chunk.lessonTextHindi,
                         style = MaterialTheme.typography.bodySmall,
@@ -733,7 +734,7 @@ fun CurriculumChunkCard(
 
             // Tribal Native Script & Transliteration Box
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
                 color = langAccent.copy(alpha = 0.08f),
                 border = BorderStroke(1.dp, langAccent.copy(alpha = 0.25f)),
                 modifier = Modifier.fillMaxWidth()
@@ -745,73 +746,82 @@ fun CurriculumChunkCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "स्थानीय भाषा व लिपि (${chunk.tribalScriptType}):",
+                            text = "${chunk.tribalLanguage} मातृभाषा पाठ (${chunk.tribalScriptType}):",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = langAccent
                         )
-                        Text(
-                            text = chunk.dialectOrRegion,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CoffeeTextSecondaryLight
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = chunk.dialectOrRegion,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            IconButton(
+                                onClick = onPlayAudio,
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .testTag("play_audio_${chunk.id}")
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.StopCircle else Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = if (isPlaying) "Stop" else "Listen",
+                                    tint = if (isPlaying) MaterialTheme.colorScheme.error else langAccent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = chunk.tribalLessonText,
+                        text = chunk.tribalNativeScriptText.ifBlank { chunk.tribalLessonText },
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = langAccent,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    )
-                    Text(
-                        text = "उच्चारण: ${chunk.transliterationDevanagari}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (chunk.transliterationDevanagari.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "उच्चारण: ${chunk.transliterationDevanagari}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Cultural Analogies & Region Tag
+            // Stitch Pedagogical Tags Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Park,
-                    contentDescription = "Culture",
-                    tint = SuccessGreen,
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    text = "सांस्कृतिक संदर्भ: ${chunk.culturalContextTag}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                StitchTagPill(
+                    text = chunk.culturalContextTag,
+                    icon = Icons.Default.Park,
+                    color = SuccessGreen,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
-                // Bloom's taxonomy tag
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
-                ) {
-                    Text(
-                        text = "Bloom: ${chunk.bloomsTaxonomyLevel}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                StitchTagPill(
+                    text = chunk.learningOutcomeCode,
+                    icon = Icons.Default.Verified,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+
+                StitchTagPill(
+                    text = "Bloom: ${chunk.bloomsTaxonomyLevel}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -824,8 +834,8 @@ fun CurriculumChunkCard(
             ) {
                 Button(
                     onClick = onLoadIntoStudio,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     modifier = Modifier
                         .weight(1f)
@@ -842,8 +852,8 @@ fun CurriculumChunkCard(
 
                 OutlinedButton(
                     onClick = onOpenDetail,
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, GlassBorderLight),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, glass.borderLight),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                     modifier = Modifier.testTag("detail_btn_${chunk.id}")
                 ) {
@@ -851,10 +861,10 @@ fun CurriculumChunkCard(
                         imageVector = Icons.Default.Visibility,
                         contentDescription = "Details",
                         modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.secondary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("विवरण", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                    Text("विवरण", fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
                 }
 
                 IconButton(
@@ -882,8 +892,13 @@ fun CurriculumChunkCard(
 fun CurriculumDetailModal(
     chunk: CurriculumContentEntity,
     onDismiss: () -> Unit,
-    onLoadIntoStudio: (CurriculumContentEntity) -> Unit
+    onLoadIntoStudio: (CurriculumContentEntity) -> Unit,
+    isPlaying: Boolean = false,
+    onPlayAudio: (CurriculumContentEntity) -> Unit = {},
+    onPlayRelay: (CurriculumContentEntity) -> Unit = {},
+    onStopAudio: () -> Unit = {}
 ) {
+    val glass = LocalGlassColors.current
     val langAccent = when (chunk.tribalLanguage.uppercase()) {
         "SANTHALI" -> SanthaliAccent
         "HO" -> HoAccent
@@ -897,8 +912,8 @@ fun CurriculumDetailModal(
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = GlassSurfaceFloating,
-            border = BorderStroke(1.5.dp, GlassBorderHighlight),
+            color = glass.surfaceFloating,
+            border = BorderStroke(1.5.dp, glass.borderHighlight),
             shadowElevation = 12.dp,
             modifier = Modifier
                 .fillMaxWidth(0.94f)
@@ -945,7 +960,7 @@ fun CurriculumDetailModal(
                             Text(
                                 text = "${chunk.curriculumBoard} • ${chunk.grade}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CoffeeTextSecondaryLight
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -956,7 +971,7 @@ fun CurriculumDetailModal(
                 }
 
                 HorizontalDivider(
-                    color = GlassBorderLight,
+                    color = glass.borderLight,
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
 
@@ -970,7 +985,7 @@ fun CurriculumDetailModal(
                     // Chapter and Learning Outcome Header
                     item {
                         GlassmorphicCard(
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 1.dp
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
@@ -1017,7 +1032,7 @@ fun CurriculumDetailModal(
                     // Hindi Lesson Text & Pedagogical Explanation
                     item {
                         GlassmorphicCard(
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 1.dp
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
@@ -1027,99 +1042,148 @@ fun CurriculumDetailModal(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = chunk.lessonTextHindi,
                                     style = MaterialTheme.typography.bodyMedium,
+                                    lineHeight = 22.sp,
                                     color = MaterialTheme.colorScheme.onSurface
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "शिक्षक अध्यापन विधि (Pedagogical Strategy):",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CoffeeTextSecondaryLight
-                                )
-                                Text(
-                                    text = chunk.pedagogicalExplanationHindi,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
 
-                    // Tribal Translation & Scripts
+                    // Tribal Mother-Tongue Translation & Transliteration
                     item {
                         GlassmorphicCard(
                             containerColor = langAccent.copy(alpha = 0.08f),
-                            borderBrush = Brush.linearGradient(listOf(langAccent.copy(alpha = 0.3f), GlassBorderLight)),
+                            borderBrush = Brush.linearGradient(listOf(langAccent.copy(alpha = 0.3f), glass.borderLight)),
                             elevation = 1.dp
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = langAccent,
+                                        modifier = Modifier.size(10.dp)
+                                    ) {}
                                     Text(
-                                        text = "2. मातृभाषा अनुवाद (${chunk.tribalLanguage})",
+                                        text = "2. ${chunk.tribalLanguage} मातृभाषा पाठ (${chunk.tribalScriptType})",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = langAccent
                                     )
-                                    Text(
-                                        text = "लिपि: ${chunk.tribalScriptType}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = langAccent
-                                    )
                                 }
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Native Script (Ol Chiki / Warang Chiti / Devanagari)
+                                Text(
+                                    text = chunk.tribalNativeScriptText.ifBlank { chunk.tribalLessonText },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 26.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
 
                                 Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = chunk.tribalLessonText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                HorizontalDivider(color = langAccent.copy(alpha = 0.2f))
+                                Spacer(modifier = Modifier.height(6.dp))
 
-                                if (chunk.tribalNativeScriptText.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        border = BorderStroke(1.dp, langAccent.copy(alpha = 0.2f)),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = chunk.tribalNativeScriptText,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = langAccent,
-                                            modifier = Modifier.padding(10.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
+                                // Devanagari Transliteration for Non-Native Hindi Teachers
                                 Text(
-                                    text = "देवनागरी उच्चारण (Phonetic Transliteration):",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CoffeeTextSecondaryLight
-                                )
-                                Text(
-                                    text = chunk.transliterationDevanagari,
+                                    text = "Devanagari Transliteration: ${chunk.transliterationDevanagari}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-
-                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Roman Pronunciation: ${chunk.transliterationLatin}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CoffeeTextSecondaryLight
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Audio Synthesis Toolbar (FLN TTS & Bilingual Relay)
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isPlaying) langAccent.copy(alpha = 0.15f) else glass.surface,
+                                    border = BorderStroke(1.dp, if (isPlaying) langAccent else glass.borderLight),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isPlaying) Icons.Default.GraphicEq else Icons.AutoMirrored.Filled.VolumeUp,
+                                                contentDescription = "Audio",
+                                                tint = if (isPlaying) langAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = if (isPlaying) "ऑडियो जारी है..." else "ध्वनि संश्लेषण (FLN TTS):",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isPlaying) langAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            if (isPlaying) {
+                                                Button(
+                                                    onClick = onStopAudio,
+                                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                                    modifier = Modifier.height(30.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Stop, contentDescription = "Stop", modifier = Modifier.size(13.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("रोकें", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            } else {
+                                                OutlinedButton(
+                                                    onClick = { onPlayAudio(chunk) },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    border = BorderStroke(1.dp, langAccent.copy(alpha = 0.6f)),
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                    modifier = Modifier
+                                                        .height(30.dp)
+                                                        .testTag("detail_play_tribal_btn")
+                                                ) {
+                                                    Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Play Tribal", tint = langAccent, modifier = Modifier.size(13.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("उच्चारण", fontSize = 11.sp, color = langAccent, fontWeight = FontWeight.Bold)
+                                                }
+
+                                                Button(
+                                                    onClick = { onPlayRelay(chunk) },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = langAccent),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                    modifier = Modifier
+                                                        .height(30.dp)
+                                                        .testTag("detail_play_relay_btn")
+                                                ) {
+                                                    Icon(Icons.Default.SyncAlt, contentDescription = "Bilingual Relay", modifier = Modifier.size(13.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("द्विभाषी रिले", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1127,7 +1191,7 @@ fun CurriculumDetailModal(
                     // Classroom Activity & Oral Assessment
                     item {
                         GlassmorphicCard(
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 1.dp
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
@@ -1164,7 +1228,7 @@ fun CurriculumDetailModal(
                     // Pedagogical Metadata & Textbook Reference
                     item {
                         GlassmorphicSurface(
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -1172,18 +1236,18 @@ fun CurriculumDetailModal(
                                 Text(
                                     text = "📖 पाठ्यपुस्तक संदर्भ: ${chunk.textbookSourceReference}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CoffeeTextSecondaryLight
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "📍 क्षेत्र व बोली: ${chunk.dialectOrRegion}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CoffeeTextSecondaryLight,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(top = 2.dp)
                                 )
                                 Text(
                                     text = "🏷️ खोज कीवर्ड: ${chunk.keywordsForRetrieval}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CoffeeTextSecondaryLight,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(top = 2.dp)
                                 )
                             }
@@ -1200,16 +1264,17 @@ fun CurriculumDetailModal(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, glass.borderLight),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("बंद करें")
+                        Text("बंद करें", fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
                         onClick = { onLoadIntoStudio(chunk) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                         modifier = Modifier.weight(1.4f)
                     ) {
                         Icon(Icons.Default.School, contentDescription = "Studio", modifier = Modifier.size(16.dp))
@@ -1231,6 +1296,7 @@ fun AddCustomCurriculumDialog(
     onDismiss: () -> Unit,
     onSave: (CurriculumContentEntity) -> Unit
 ) {
+    val glass = LocalGlassColors.current
     var title by remember { mutableStateOf("") }
     var topic by remember { mutableStateOf("") }
     var grade by remember { mutableStateOf("Grade 2") }
@@ -1242,6 +1308,10 @@ fun AddCustomCurriculumDialog(
     var outcomeCode by remember { mutableStateOf("FLN-JH-01") }
     var culturalContext by remember { mutableStateOf("सरहुल व प्रकृति पूजा") }
     var activity by remember { mutableStateOf("कक्षा में नए शब्दों का उच्चारण दोहराएं") }
+    var attemptedSave by remember { mutableStateOf(false) }
+
+    val isTitleError = attemptedSave && title.isBlank()
+    val isHindiError = attemptedSave && hindiText.isBlank()
 
     val gradeOptions = listOf("Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5")
 
@@ -1251,13 +1321,11 @@ fun AddCustomCurriculumDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = GlassSurfaceFloating,
-            border = BorderStroke(1.5.dp, GlassBorderHighlight),
-            shadowElevation = 12.dp,
             modifier = Modifier
-                .fillMaxWidth(0.94f)
-                .fillMaxHeight(0.88f)
-                .clip(RoundedCornerShape(24.dp))
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.9f),
+            color = glass.surface,
+            border = BorderStroke(1.dp, glass.borderLight)
         ) {
             Column(
                 modifier = Modifier
@@ -1294,7 +1362,7 @@ fun AddCustomCurriculumDialog(
                     }
                 }
 
-                HorizontalDivider(color = GlassBorderLight, modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = glass.borderLight, modifier = Modifier.padding(vertical = 10.dp))
 
                 LazyColumn(
                     modifier = Modifier
@@ -1308,6 +1376,10 @@ fun AddCustomCurriculumDialog(
                             onValueChange = { title = it },
                             label = { Text("पाठ का शीर्षक (Chapter Title)*") },
                             placeholder = { Text("e.g. साल का पेड़ और सरहुल पर्व") },
+                            isError = isTitleError,
+                            supportingText = if (isTitleError) {
+                                { Text("पाठ का शीर्षक अनिवार्य है (Required)", color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -1380,6 +1452,10 @@ fun AddCustomCurriculumDialog(
                             value = hindiText,
                             onValueChange = { hindiText = it },
                             label = { Text("हिन्दी मुख्य पाठ (Hindi Core Text)*") },
+                            isError = isHindiError,
+                            supportingText = if (isHindiError) {
+                                { Text("हिन्दी मुख्य पाठ अनिवार्य है (Required)", color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             minLines = 2,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -1443,14 +1519,16 @@ fun AddCustomCurriculumDialog(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, glass.borderLight),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("रद्द करें")
+                        Text("रद्द करें", fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
                         onClick = {
+                            attemptedSave = true
                             if (title.isBlank() || hindiText.isBlank()) return@Button
                             val chunk = CurriculumContentEntity(
                                 id = "custom_curriculum_${UUID.randomUUID().toString().take(8)}",
@@ -1461,7 +1539,7 @@ fun AddCustomCurriculumDialog(
                                 chapterNumber = (1..10).random(),
                                 chapterTitle = title.trim(),
                                 topic = topic.ifBlank { title }.trim(),
-                                learningOutcomeCode = outcomeCode.trim(),
+                                learningOutcomeCode = outcomeCode.ifBlank { "FLN-JH-01" }.trim(),
                                 learningOutcomeDescription = "स्थानीय आदिवासी प्राथमिक विद्यालय हेतु अनुकूलित पाठ",
                                 lessonTextHindi = hindiText.trim(),
                                 pedagogicalExplanationHindi = "शिक्षक स्थानीय संदर्भ और मातृभाषा का प्रयोग करें।",
@@ -1471,8 +1549,8 @@ fun AddCustomCurriculumDialog(
                                 tribalLessonText = tribalText.ifBlank { hindiText }.trim(),
                                 tribalScriptType = if (language == TargetLanguage.SANTHALI) "OL_CHIKI" else "DEVANAGARI_PHONETIC",
                                 tribalNativeScriptText = tribalText.trim(),
-                                transliterationLatin = transliteration.trim(),
-                                transliterationDevanagari = transliteration.trim(),
+                                transliterationLatin = transliteration.ifBlank { title }.trim(),
+                                transliterationDevanagari = transliteration.ifBlank { tribalText.ifBlank { hindiText } }.trim(),
                                 dialectOrRegion = language.region,
                                 culturalContextTag = culturalContext.trim(),
                                 bloomsTaxonomyLevel = "APPLY",
@@ -1483,8 +1561,8 @@ fun AddCustomCurriculumDialog(
                             )
                             onSave(chunk)
                         },
-                        enabled = title.isNotBlank() && hindiText.isNotBlank(),
-                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1.5f)
                             .testTag("save_custom_curriculum_btn")

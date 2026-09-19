@@ -11,7 +11,7 @@ class VoicePipelineService:
     """Manages VAD, ASR, translation, and TTS audio synthesis with real-time latency budgets."""
 
     @staticmethod
-    def process_voice_turn(hindi_transcript: str, target_lang: str) -> Dict[str, Any]:
+    def process_voice_turn(hindi_transcript: str, target_lang: str, speaker_role: str = "TEACHER") -> Dict[str, Any]:
         # Realistic latency budgets across pipeline stages (measured on edge hardware)
         vad_ms = 95
         asr_ms = 580
@@ -22,10 +22,29 @@ class VoicePipelineService:
         
         try:
             from translation.providers import language_provider
-        except ImportError:
-            from ..translation.providers import language_provider
-            
-        translation_res = language_provider.translate_concept(hindi_transcript, target_lang)
+        except Exception:
+            import sys, os
+            parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            if parent_dir not in sys.path:
+                sys.path.insert(0, parent_dir)
+            from translation.providers import language_provider
+
+        is_student = (speaker_role.upper() == "STUDENT")
+
+        if is_student:
+            translation_res = language_provider.translate_student_to_hindi(hindi_transcript, target_lang)
+            translated_text = translation_res["hindi_comprehension"]
+            script_type = "DEVANAGARI"
+            phonetic_translit = translation_res["transliteration_hindi"]
+            source_lang = target_lang
+            out_lang = "hin_Deva"
+        else:
+            translation_res = language_provider.translate_concept(hindi_transcript, target_lang)
+            translated_text = translation_res["native_script_text"]
+            script_type = translation_res["script_type"]
+            phonetic_translit = translation_res["transliteration_hindi"]
+            source_lang = "hin_Deva"
+            out_lang = target_lang
         
         # Audio metadata
         audio_metadata = {
@@ -33,7 +52,7 @@ class VoicePipelineService:
             "channels": 1,
             "bitrate_kbps": 64,
             "codec": "MP3",
-            "voice_speaker_model": f"Kokoro-82M-{target_lang.lower()}-tribal-v3",
+            "voice_speaker_model": f"Kokoro-82M-{target_lang.lower()}-tribal-v3" if not is_student else "Kokoro-82M-hi-IN-v3",
             "duration_ms": 2800,
             "loudness_lufs": -16.0
         }
@@ -48,8 +67,9 @@ class VoicePipelineService:
             "duration_ms": total_ms,
             "status_code": "OK",
             "attributes": {
-                "source_language": "hin_Deva",
-                "target_language": target_lang,
+                "speaker_role": speaker_role.upper(),
+                "source_language": source_lang,
+                "target_language": out_lang,
                 "sla_target_ms": 3000,
                 "sla_compliant": True,
                 "hardware_tier": "ARM64_TABLET_2GB"
@@ -57,11 +77,12 @@ class VoicePipelineService:
         }
         
         return {
+            "speaker_role": speaker_role.upper(),
             "source_transcript": hindi_transcript,
             "target_language": target_lang,
-            "translated_text": translation_res["native_script_text"],
-            "script_type": translation_res["script_type"],
-            "phonetic_transliteration": translation_res["transliteration_hindi"],
+            "translated_text": translated_text,
+            "script_type": script_type,
+            "phonetic_transliteration": phonetic_translit,
             "audio_metadata": audio_metadata,
             "telemetry_span": telemetry_span,
             "latency_breakdown_ms": {

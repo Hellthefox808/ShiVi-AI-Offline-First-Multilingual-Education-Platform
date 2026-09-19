@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,6 +68,7 @@ fun MultimodalScreen(
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("🖼️ AI दृश्य (Image/Veo)", "🔍 खोज (Search Grounding)", "📷 छवि विश्लेषण (Analysis)")
+    val glass = LocalGlassColors.current
 
     Column(
         modifier = modifier
@@ -76,11 +78,11 @@ fun MultimodalScreen(
         // Tab Navigation
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = GlassSurfaceFloating,
+            containerColor = glass.surfaceFloating,
             contentColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .clip(RoundedCornerShape(16.dp))
-                .border(BorderStroke(1.dp, GlassBorderLight), RoundedCornerShape(16.dp))
+                .border(BorderStroke(1.dp, glass.borderLight), RoundedCornerShape(16.dp))
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
@@ -104,7 +106,7 @@ fun MultimodalScreen(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(24.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 3.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -123,10 +125,10 @@ fun MultimodalScreen(
                                     onValueChange = { viewModel.imagePrompt.value = it },
                                     label = { Text("पाठ्य सामग्री / दृश्य विवरण (Prompt)") },
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = GlassSurfaceUltraLight,
-                                        unfocusedContainerColor = GlassSurfaceUltraLight,
+                                        focusedContainerColor = glass.surfaceUltraLight,
+                                        unfocusedContainerColor = glass.surfaceUltraLight,
                                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedBorderColor = GlassBorderLight
+                                        unfocusedBorderColor = glass.borderLight
                                     ),
                                     modifier = Modifier.fillMaxWidth().testTag("image_prompt_input"),
                                     shape = RoundedCornerShape(16.dp)
@@ -150,14 +152,14 @@ fun MultimodalScreen(
                                                 onClick = { viewModel.selectedAspectRatio.value = ratio },
                                                 shape = RoundedCornerShape(14.dp),
                                                 colors = FilterChipDefaults.filterChipColors(
-                                                    containerColor = GlassSurfaceLight,
+                                                    containerColor = glass.surface,
                                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                                     selectedLabelColor = MaterialTheme.colorScheme.primary
                                                 ),
                                                 border = FilterChipDefaults.filterChipBorder(
                                                     enabled = true,
                                                     selected = ratio == selectedAspectRatio,
-                                                    borderColor = GlassBorderLight,
+                                                    borderColor = glass.borderLight,
                                                     selectedBorderColor = MaterialTheme.colorScheme.primary
                                                 ),
                                                 label = { Text(ratio, fontSize = 11.sp) }
@@ -184,14 +186,14 @@ fun MultimodalScreen(
                                                 onClick = { viewModel.selectedImageSize.value = size },
                                                 shape = RoundedCornerShape(14.dp),
                                                 colors = FilterChipDefaults.filterChipColors(
-                                                    containerColor = GlassSurfaceLight,
+                                                    containerColor = glass.surface,
                                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                                     selectedLabelColor = MaterialTheme.colorScheme.primary
                                                 ),
                                                 border = FilterChipDefaults.filterChipBorder(
                                                     enabled = true,
                                                     selected = size == selectedImageSize,
-                                                    borderColor = GlassBorderLight,
+                                                    borderColor = glass.borderLight,
                                                     selectedBorderColor = MaterialTheme.colorScheme.primary
                                                 ),
                                                 label = { Text(size, fontSize = 11.sp) }
@@ -241,7 +243,7 @@ fun MultimodalScreen(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(24.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 3.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -260,10 +262,10 @@ fun MultimodalScreen(
                                     onValueChange = { viewModel.veoPrompt.value = it },
                                     label = { Text("वीडियो अवधारणा विवरण (Video Prompt)") },
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = GlassSurfaceUltraLight,
-                                        unfocusedContainerColor = GlassSurfaceUltraLight,
+                                        focusedContainerColor = glass.surfaceUltraLight,
+                                        unfocusedContainerColor = glass.surfaceUltraLight,
                                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedBorderColor = GlassBorderLight
+                                        unfocusedBorderColor = glass.borderLight
                                     ),
                                     modifier = Modifier.fillMaxWidth().testTag("veo_prompt_input"),
                                     shape = RoundedCornerShape(16.dp)
@@ -279,14 +281,14 @@ fun MultimodalScreen(
                                         onClick = { viewModel.veoAspectRatio.value = "16:9" },
                                         shape = RoundedCornerShape(14.dp),
                                         colors = FilterChipDefaults.filterChipColors(
-                                            containerColor = GlassSurfaceLight,
+                                            containerColor = glass.surface,
                                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                             selectedLabelColor = MaterialTheme.colorScheme.primary
                                         ),
                                         border = FilterChipDefaults.filterChipBorder(
                                             enabled = true,
                                             selected = veoAspectRatio == "16:9",
-                                            borderColor = GlassBorderLight,
+                                            borderColor = glass.borderLight,
                                             selectedBorderColor = MaterialTheme.colorScheme.primary
                                         ),
                                         label = { Text("16:9 Landscape") }
@@ -296,14 +298,14 @@ fun MultimodalScreen(
                                         onClick = { viewModel.veoAspectRatio.value = "9:16" },
                                         shape = RoundedCornerShape(14.dp),
                                         colors = FilterChipDefaults.filterChipColors(
-                                            containerColor = GlassSurfaceLight,
+                                            containerColor = glass.surface,
                                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                             selectedLabelColor = MaterialTheme.colorScheme.primary
                                         ),
                                         border = FilterChipDefaults.filterChipBorder(
                                             enabled = true,
                                             selected = veoAspectRatio == "9:16",
-                                            borderColor = GlassBorderLight,
+                                            borderColor = glass.borderLight,
                                             selectedBorderColor = MaterialTheme.colorScheme.primary
                                         ),
                                         label = { Text("9:16 Portrait") }
@@ -332,7 +334,7 @@ fun MultimodalScreen(
                                     Surface(
                                         shape = RoundedCornerShape(14.dp),
                                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                                     ) {
                                         Text(
@@ -353,7 +355,7 @@ fun MultimodalScreen(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(24.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 3.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -377,10 +379,10 @@ fun MultimodalScreen(
                                     onValueChange = { viewModel.searchGroundingQuery.value = it },
                                     label = { Text("खोज प्रश्न (उदा. झारखंड सरहुल पर्व का इतिहास व तिथि)") },
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = GlassSurfaceUltraLight,
-                                        unfocusedContainerColor = GlassSurfaceUltraLight,
+                                        focusedContainerColor = glass.surfaceUltraLight,
+                                        unfocusedContainerColor = glass.surfaceUltraLight,
                                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedBorderColor = GlassBorderLight
+                                        unfocusedBorderColor = glass.borderLight
                                     ),
                                     modifier = Modifier.fillMaxWidth().testTag("search_grounding_input"),
                                     shape = RoundedCornerShape(16.dp)
@@ -398,7 +400,7 @@ fun MultimodalScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text("गूगल सर्च ग्राउंडिंग हो रहा है...")
                                     } else {
-                                        Icon(Icons.Default.ManageSearch, contentDescription = null)
+                                        Icon(Icons.AutoMirrored.Filled.ManageSearch, contentDescription = null)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text("सर्च व मातृभाषा अनुवाद प्राप्त करें")
                                     }
@@ -443,7 +445,7 @@ fun MultimodalScreen(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(24.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 3.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -478,7 +480,7 @@ fun MultimodalScreen(
 
                                 Surface(
                                     shape = RoundedCornerShape(16.dp),
-                                    border = BorderStroke(1.dp, GlassBorderLight),
+                                    border = BorderStroke(1.dp, glass.borderLight),
                                     modifier = Modifier.fillMaxWidth().height(140.dp)
                                 ) {
                                     Image(

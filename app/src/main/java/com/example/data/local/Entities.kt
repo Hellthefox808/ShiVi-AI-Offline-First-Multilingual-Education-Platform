@@ -1,9 +1,19 @@
 package com.example.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.domain.model.WorksheetQuestion
+import com.example.domain.model.parseWorksheetQuestionsJson
 
-@Entity(tableName = "lessons")
+@Entity(
+    tableName = "lessons",
+    indices = [
+        Index("status"),
+        Index("targetLanguage"),
+        Index("grade")
+    ]
+)
 data class LessonEntity(
     @PrimaryKey val id: String,
     val title: String,
@@ -26,7 +36,13 @@ data class LessonEntity(
     val syncStatus: String = "PENDING"
 )
 
-@Entity(tableName = "worksheets")
+@Entity(
+    tableName = "worksheets",
+    indices = [
+        Index("lessonId"),
+        Index("isApproved")
+    ]
+)
 data class WorksheetEntity(
     @PrimaryKey val id: String,
     val lessonId: String,
@@ -38,6 +54,9 @@ data class WorksheetEntity(
     val isApproved: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+fun WorksheetEntity.parseQuestions(): List<WorksheetQuestion> =
+    parseWorksheetQuestionsJson(this.questionsJson)
 
 @Entity(tableName = "flashcards")
 data class FlashcardEntity(
@@ -78,7 +97,13 @@ data class AssessmentAttemptEntity(
     val syncStatus: String = "PENDING_OUTBOX"
 )
 
-@Entity(tableName = "glossary")
+@Entity(
+    tableName = "glossary",
+    indices = [
+        Index("category"),
+        Index("hindiWord")
+    ]
+)
 data class GlossaryEntity(
     @PrimaryKey val id: String,
     val category: String,
@@ -94,7 +119,14 @@ data class GlossaryEntity(
     val exampleSentenceTarget: String
 )
 
-@Entity(tableName = "outbox")
+@Entity(
+    tableName = "outbox",
+    indices = [
+        Index("status"),
+        Index("createdAt"),
+        Index("sequenceNumber")
+    ]
+)
 data class OutboxEntity(
     @PrimaryKey val id: String,
     val operationId: String,
@@ -123,7 +155,15 @@ data class SyncLogEntity(
  * Stores syllabus text, pedagogical metadata (Bloom's, FLN learning outcomes),
  * tribal language sources (Santhali, Ho, Mundari), and cultural grounding context.
  */
-@Entity(tableName = "curriculum_rag_content")
+@Entity(
+    tableName = "curriculum_rag_content",
+    indices = [
+        Index("tribalLanguage"),
+        Index("grade"),
+        Index(value = ["grade", "tribalLanguage"]),
+        Index("learningOutcomeCode")
+    ]
+)
 data class CurriculumContentEntity(
     @PrimaryKey val id: String,
     // Academic & Curriculum Hierarchy

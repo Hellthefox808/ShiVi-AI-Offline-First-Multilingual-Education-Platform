@@ -47,6 +47,7 @@ fun FullStackArchitectureView(
     val isEvaluatingQe by viewModel.isEvaluatingQe.collectAsState()
     val offlineTabletState by viewModel.offlineTabletState.collectAsState()
 
+    val glass = LocalGlassColors.current
     var activeArchSection by remember { mutableStateOf(0) }
     val archSections = listOf(
         "🏛️ 5-टियर आर्किटेक्चर",
@@ -64,7 +65,7 @@ fun FullStackArchitectureView(
         // Section Selector Tabs
         GlassmorphicCard(
             shape = RoundedCornerShape(16.dp),
-            containerColor = GlassSurfaceFloating,
+            containerColor = glass.surfaceFloating,
             elevation = 2.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -142,8 +143,8 @@ fun FullStackArchitectureView(
                                 val isSelected = tier.id == selectedTier.id
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else GlassSurfaceLight,
-                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else GlassBorderLight),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else glass.surface,
+                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else glass.borderLight),
                                     onClick = { viewModel.selectTechTier(tier) },
                                     modifier = Modifier.testTag("tech_tier_${tier.id}")
                                 ) {
@@ -158,12 +159,12 @@ fun FullStackArchitectureView(
                                                 text = tier.title,
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary else CoffeeTextPrimaryLight
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
                                                 text = tier.primaryTech.take(18) + "...",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = CoffeeTextSecondaryLight,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontSize = 9.sp
                                             )
                                         }
@@ -177,7 +178,7 @@ fun FullStackArchitectureView(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(18.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -201,14 +202,14 @@ fun FullStackArchitectureView(
                                             Text(
                                                 text = selectedTier.subtitle,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = CoffeeTextSecondaryLight
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
                                         color = MaterialTheme.colorScheme.primaryContainer,
-                                        border = BorderStroke(1.dp, GlassBorderLight)
+                                        border = BorderStroke(1.dp, glass.borderLight)
                                     ) {
                                         Text(
                                             text = selectedTier.category,
@@ -220,7 +221,7 @@ fun FullStackArchitectureView(
                                     }
                                 }
 
-                                HorizontalDivider(color = GlassBorderLight)
+                                HorizontalDivider(color = glass.borderLight)
 
                                 // Tech & Version Specs
                                 Row(
@@ -229,23 +230,23 @@ fun FullStackArchitectureView(
                                 ) {
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = GlassSurfaceUltraLight,
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        color = glass.surfaceUltraLight,
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
-                                            Text("कोर फ्रेमवर्क व वर्जन", style = MaterialTheme.typography.labelSmall, color = CoffeeTextSecondaryLight)
+                                            Text("कोर फ्रेमवर्क व वर्जन", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text(selectedTier.version, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = GlassSurfaceUltraLight,
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        color = glass.surfaceUltraLight,
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
-                                            Text("SLA व लेटेंसी", style = MaterialTheme.typography.labelSmall, color = CoffeeTextSecondaryLight)
+                                            Text("SLA व लेटेंसी", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text(selectedTier.slaOrLatency, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                         }
                                     }
@@ -253,13 +254,10 @@ fun FullStackArchitectureView(
 
                                 // Key Responsibilities
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("मुख्य कार्यभार (Core Responsibilities):", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    Text("मुख्य उत्तरदायित्व (Core Engine)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                     selectedTier.responsibilities.forEach { resp ->
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.Top
-                                        ) {
-                                            Text("•", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text("•", color = MaterialTheme.colorScheme.primary)
                                             Text(resp, style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
@@ -276,7 +274,7 @@ fun FullStackArchitectureView(
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
                                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                                                border = BorderStroke(1.dp, GlassBorderLight)
+                                                border = BorderStroke(1.dp, glass.borderLight)
                                             ) {
                                                 Text(
                                                     text = lib,
@@ -335,8 +333,8 @@ fun FullStackArchitectureView(
                                 val isSelected = node.path == selectedNode.path
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else GlassSurfaceLight,
-                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else GlassBorderLight),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else glass.surface,
+                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else glass.borderLight),
                                     onClick = { viewModel.selectMonorepoNode(node) },
                                     modifier = Modifier.fillMaxWidth().testTag("monorepo_node_${node.name}")
                                 ) {
@@ -352,7 +350,7 @@ fun FullStackArchitectureView(
                                             Icon(
                                                 imageVector = if (node.type == "PACKAGE") Icons.Default.Extension else Icons.Default.Folder,
                                                 contentDescription = null,
-                                                tint = if (isSelected) MaterialTheme.colorScheme.primary else CoffeeTextSecondaryLight,
+                                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Text(
@@ -365,7 +363,7 @@ fun FullStackArchitectureView(
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
                                             color = MaterialTheme.colorScheme.surfaceVariant,
-                                            border = BorderStroke(1.dp, GlassBorderLight)
+                                            border = BorderStroke(1.dp, glass.borderLight)
                                         ) {
                                             Text(
                                                 text = node.techStack.take(15),
@@ -384,7 +382,7 @@ fun FullStackArchitectureView(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(16.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -410,7 +408,7 @@ fun FullStackArchitectureView(
                                 Text(
                                     text = selectedNode.purpose,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CoffeeTextSecondaryLight
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
                                 Surface(
@@ -470,7 +468,7 @@ fun FullStackArchitectureView(
                     items(diskAnnBenchmarks) { bench ->
                         GlassmorphicCard(
                             shape = RoundedCornerShape(14.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -499,12 +497,12 @@ fun FullStackArchitectureView(
 
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = GlassSurfaceUltraLight,
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        color = glass.surfaceUltraLight,
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
-                                            Text("HNSW Index", style = MaterialTheme.typography.labelSmall, color = CoffeeTextSecondaryLight)
+                                            Text("HNSW Index", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text(bench.hnswValue, style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
@@ -555,8 +553,8 @@ fun FullStackArchitectureView(
                             qeSamples.forEachIndexed { idx, sample ->
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = if (sample.cometScore == activeQe.cometScore) MaterialTheme.colorScheme.primaryContainer else GlassSurfaceLight,
-                                    border = BorderStroke(1.dp, GlassBorderLight),
+                                    color = if (sample.cometScore == activeQe.cometScore) MaterialTheme.colorScheme.primaryContainer else glass.surface,
+                                    border = BorderStroke(1.dp, glass.borderLight),
                                     onClick = { viewModel.selectQeSample(sample) }
                                 ) {
                                     Text(
@@ -574,7 +572,7 @@ fun FullStackArchitectureView(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(16.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -583,34 +581,30 @@ fun FullStackArchitectureView(
                                     value = qeSourceInput,
                                     onValueChange = { viewModel.updateQeSourceInput(it) },
                                     label = { Text("स्रोत वाक्य (Hindi Source Sentence)") },
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth().testTag("qe_source_input")
+                                    modifier = Modifier.fillMaxWidth()
                                 )
 
                                 OutlinedTextField(
                                     value = qeTargetInput,
                                     onValueChange = { viewModel.updateQeTargetInput(it) },
-                                    label = { Text("मातृभाषा अनुवाद (Tribal Target Translation)") },
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth().testTag("qe_target_input")
+                                    label = { Text("अनुवादित वाक्य (Tribal Target Sentence)") },
+                                    modifier = Modifier.fillMaxWidth()
                                 )
 
                                 Button(
                                     onClick = { viewModel.evaluateCustomQualityEstimation() },
-                                    enabled = !isEvaluatingQe,
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth().testTag("evaluate_qe_button")
+                                    enabled = !isEvaluatingQe && qeSourceInput.isNotBlank() && qeTargetInput.isNotBlank(),
+                                    modifier = Modifier.fillMaxWidth().testTag("evaluate_qe_button"),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
                                     if (isEvaluatingQe) {
                                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("COMETKiwi व XCOMET गणना जारी...")
+                                        Text("COMET मॉडल स्कोरिंग जारी...")
                                     } else {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Icon(Icons.Default.Speed, contentDescription = null)
-                                            Text("COMETKiwi & XCOMET गुणवत्ता जांचें")
-                                        }
+                                        Icon(Icons.Default.Bolt, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("गुणवत्ता मूल्यांकन रन करें (Run QE)")
                                     }
                                 }
                             }
@@ -627,7 +621,7 @@ fun FullStackArchitectureView(
 
                         GlassmorphicCard(
                             shape = RoundedCornerShape(18.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -663,11 +657,11 @@ fun FullStackArchitectureView(
                                 Text(
                                     text = activeQe.explanation,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CoffeeTextSecondaryLight
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
                                 if (activeQe.detectedErrorSpans.isNotEmpty()) {
-                                    HorizontalDivider(color = GlassBorderLight)
+                                    HorizontalDivider(color = glass.borderLight)
                                     Text("⚠️ XCOMET MQM त्रुटि विश्लेषण (Error Spans):", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                     activeQe.detectedErrorSpans.forEach { span ->
                                         Surface(
@@ -699,7 +693,7 @@ fun FullStackArchitectureView(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(18.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -711,7 +705,7 @@ fun FullStackArchitectureView(
                                 ) {
                                     Column {
                                         Text("📱 Rural Tablet Edge Node", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        Text(offlineTabletState.tabletId, style = MaterialTheme.typography.labelSmall, color = CoffeeTextSecondaryLight)
+                                        Text(offlineTabletState.tabletId, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
@@ -722,7 +716,7 @@ fun FullStackArchitectureView(
                                     }
                                 }
 
-                                HorizontalDivider(color = GlassBorderLight)
+                                HorizontalDivider(color = glass.borderLight)
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -730,24 +724,24 @@ fun FullStackArchitectureView(
                                 ) {
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = GlassSurfaceUltraLight,
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        color = glass.surfaceUltraLight,
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Column(modifier = Modifier.padding(10.dp)) {
-                                            Text("सिंक कर्सर स्थिति", style = MaterialTheme.typography.labelSmall, color = CoffeeTextSecondaryLight)
+                                            Text("सिंक कर्सर स्थिति", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text("#${offlineTabletState.syncCursorPosition}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                         }
                                     }
 
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = GlassSurfaceUltraLight,
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        color = glass.surfaceUltraLight,
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Column(modifier = Modifier.padding(10.dp)) {
-                                            Text("लोकल डेटाबेस इंजन", style = MaterialTheme.typography.labelSmall, color = CoffeeTextSecondaryLight)
+                                            Text("लोकल डेटाबेस इंजन", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text("SQLite 3 (Room WAL)", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                                         }
                                     }
@@ -756,7 +750,7 @@ fun FullStackArchitectureView(
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                    border = BorderStroke(1.dp, GlassBorderLight),
+                                    border = BorderStroke(1.dp, glass.borderLight),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -805,7 +799,7 @@ fun FullStackArchitectureView(
                     items(PreloadedData.traceabilityLedger) { trace ->
                         GlassmorphicCard(
                             shape = RoundedCornerShape(16.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -851,7 +845,7 @@ fun FullStackArchitectureView(
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                                    border = BorderStroke(1.dp, GlassBorderLight),
+                                    border = BorderStroke(1.dp, glass.borderLight),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(

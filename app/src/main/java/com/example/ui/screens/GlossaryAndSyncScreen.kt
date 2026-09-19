@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -60,6 +61,7 @@ fun GlossaryAndSyncScreen(
     var activeSubTab by remember { mutableStateOf(0) }
     var ragViewMode by remember { mutableStateOf(0) } // 0: Local Embedding RAG, 1: Full Schema Browser
     val subTabs = listOf("📚 जनजातीय शब्दकोश", "📖 RAG ज्ञानकोष (Offline)", "🔄 आउटबॉक्स सिंक", "🏛️ आर्किटेक्चर व टेक स्टैक")
+    val glass = LocalGlassColors.current
 
     Column(
         modifier = modifier
@@ -69,7 +71,7 @@ fun GlossaryAndSyncScreen(
         // Tab Selector in Glass Card
         GlassmorphicCard(
             shape = RoundedCornerShape(18.dp),
-            containerColor = GlassSurfaceFloating,
+            containerColor = glass.surfaceFloating,
             elevation = 2.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -137,7 +139,7 @@ fun GlossaryAndSyncScreen(
                         selected = ragViewMode == 1,
                         onClick = { ragViewMode = 1 },
                         label = { Text("📖 पाठ्यक्रम तालिका (${searchedCurriculum.size})", fontSize = 11.sp) },
-                        leadingIcon = { Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -226,7 +228,7 @@ fun GlossaryAndSyncScreen(
                     // Real-time On-Device RAG Telemetry Banner
                     GlassmorphicCard(
                         shape = RoundedCornerShape(14.dp),
-                        containerColor = GlassSurfaceLight,
+                        containerColor = glass.surface,
                         elevation = 2.dp,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -258,7 +260,7 @@ fun GlossaryAndSyncScreen(
                             Surface(
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                border = BorderStroke(1.dp, GlassBorderLight)
+                                border = BorderStroke(1.dp, glass.borderLight)
                             ) {
                                 Text(
                                     text = "${ragQueryContext.retrievalLatencyMs} ms लेटेंसी",
@@ -366,7 +368,7 @@ fun GlossaryAndSyncScreen(
                     item {
                         GlassmorphicCard(
                             shape = RoundedCornerShape(24.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 3.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -417,7 +419,7 @@ fun GlossaryAndSyncScreen(
                                     Surface(
                                         shape = RoundedCornerShape(14.dp),
                                         color = MaterialTheme.colorScheme.secondaryContainer,
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.weight(1f).padding(vertical = 4.dp)
                                     ) {
                                         Column(
@@ -431,7 +433,7 @@ fun GlossaryAndSyncScreen(
                                     Surface(
                                         shape = RoundedCornerShape(14.dp),
                                         color = MaterialTheme.colorScheme.primaryContainer,
-                                        border = BorderStroke(1.dp, GlassBorderLight),
+                                        border = BorderStroke(1.dp, glass.borderLight),
                                         modifier = Modifier.weight(1f).padding(vertical = 4.dp)
                                     ) {
                                         Column(
@@ -478,14 +480,14 @@ fun GlossaryAndSyncScreen(
                         SectionHeader(
                             title = "सिंक गतिविधि लॉग (Sync Logs)",
                             subtitle = "Idempotent Transaction History",
-                            icon = Icons.Default.ReceiptLong
+                            icon = Icons.AutoMirrored.Filled.ReceiptLong
                         )
                     }
 
                     items(recentSyncLogs) { log ->
                         GlassmorphicCard(
                             shape = RoundedCornerShape(14.dp),
-                            containerColor = GlassSurfaceLight,
+                            containerColor = glass.surface,
                             elevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -535,9 +537,10 @@ fun GlossaryItemCard(
     onSpeakText: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val glass = LocalGlassColors.current
     GlassmorphicCard(
         shape = RoundedCornerShape(18.dp),
-        containerColor = GlassSurfaceLight,
+        containerColor = glass.surface,
         elevation = 2.dp,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -561,7 +564,7 @@ fun GlossaryItemCard(
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.VolumeUp,
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = "Speak Pronunciation",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
@@ -577,8 +580,8 @@ fun GlossaryItemCard(
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = GlassSurfaceUltraLight,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                color = glass.surfaceUltraLight,
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -617,6 +620,7 @@ fun GlossaryItemCard(
 
 @Composable
 fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Modifier) {
+    val glass = LocalGlassColors.current
     val langColor = when (chunk.tribalLanguage) {
         "SANTHALI" -> SanthaliAccent
         "HO" -> HoAccent
@@ -625,7 +629,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
 
     GlassmorphicCard(
         shape = RoundedCornerShape(20.dp),
-        containerColor = GlassSurfaceLight,
+        containerColor = glass.surface,
         elevation = 2.dp,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -643,7 +647,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.secondaryContainer,
-                        border = BorderStroke(1.dp, GlassBorderLight)
+                        border = BorderStroke(1.dp, glass.borderLight)
                     ) {
                         Text(
                             text = chunk.grade,
@@ -656,7 +660,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, GlassBorderLight)
+                        border = BorderStroke(1.dp, glass.borderLight)
                     ) {
                         Text(
                             text = chunk.subject,
@@ -701,7 +705,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
             Surface(
                 shape = RoundedCornerShape(10.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                border = BorderStroke(1.dp, GlassBorderLight),
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -734,8 +738,8 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
             // Lesson Hindi Text
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = GlassSurfaceUltraLight,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                color = glass.surfaceUltraLight,
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -808,7 +812,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    border = BorderStroke(1.dp, GlassBorderLight),
+                    border = BorderStroke(1.dp, glass.borderLight),
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -829,7 +833,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                    border = BorderStroke(1.dp, GlassBorderLight),
+                    border = BorderStroke(1.dp, glass.borderLight),
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -858,7 +862,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, GlassBorderLight)
+                        border = BorderStroke(1.dp, glass.borderLight)
                     ) {
                         Text(
                             text = "Bloom's: ${chunk.bloomsTaxonomyLevel}",
@@ -871,7 +875,7 @@ fun CurriculumChunkCard(chunk: CurriculumContentEntity, modifier: Modifier = Mod
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, GlassBorderLight)
+                        border = BorderStroke(1.dp, glass.borderLight)
                     ) {
                         Text(
                             text = "संस्कृति: ${chunk.culturalContextTag}",
@@ -898,6 +902,7 @@ fun RagCurriculumMatchCard(
     onLoadToStudio: (RagCurriculumMatch) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val glass = LocalGlassColors.current
     val chunk = match.chunk
     val langColor = when (chunk.tribalLanguage) {
         "SANTHALI" -> SanthaliAccent
@@ -908,7 +913,7 @@ fun RagCurriculumMatchCard(
 
     GlassmorphicCard(
         shape = RoundedCornerShape(20.dp),
-        containerColor = GlassSurfaceLight,
+        containerColor = glass.surface,
         elevation = 3.dp,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -952,7 +957,7 @@ fun RagCurriculumMatchCard(
                 Surface(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    border = BorderStroke(1.dp, GlassBorderLight)
+                    border = BorderStroke(1.dp, glass.borderLight)
                 ) {
                     Text(
                         text = "$scorePercentage% RAG प्रासंगिकता",
@@ -967,8 +972,8 @@ fun RagCurriculumMatchCard(
             // Embedding vs Lexical Score Breakdown Bar
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = GlassSurfaceUltraLight,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                color = glass.surfaceUltraLight,
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -1006,7 +1011,7 @@ fun RagCurriculumMatchCard(
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                            border = BorderStroke(1.dp, GlassBorderLight)
+                            border = BorderStroke(1.dp, glass.borderLight)
                         ) {
                             Text(
                                 text = kw,
@@ -1019,7 +1024,7 @@ fun RagCurriculumMatchCard(
                 }
             }
 
-            HorizontalDivider(color = GlassBorderLight)
+            HorizontalDivider(color = glass.borderLight)
 
             // Curriculum Chapter & Topic Title
             Row(
@@ -1059,7 +1064,7 @@ fun RagCurriculumMatchCard(
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                border = BorderStroke(1.dp, GlassBorderLight),
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -1079,8 +1084,8 @@ fun RagCurriculumMatchCard(
             // Bilingual Grounded Content (Hindi + Tribal)
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = GlassSurfaceUltraLight,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                color = glass.surfaceUltraLight,
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

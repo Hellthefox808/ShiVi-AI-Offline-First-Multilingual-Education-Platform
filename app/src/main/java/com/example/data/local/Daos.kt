@@ -32,6 +32,12 @@ interface WorksheetDao {
     @Query("SELECT * FROM worksheets ORDER BY createdAt DESC")
     fun getAllWorksheets(): Flow<List<WorksheetEntity>>
 
+    @Query("SELECT * FROM worksheets WHERE id = :id")
+    suspend fun getWorksheetById(id: String): WorksheetEntity?
+
+    @Query("UPDATE worksheets SET isApproved = 1 WHERE id = :id")
+    suspend fun approveWorksheet(id: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorksheet(worksheet: WorksheetEntity)
 }
@@ -131,7 +137,7 @@ interface CurriculumDao {
     @Query("""
         SELECT * FROM curriculum_rag_content 
         WHERE (:language IS NULL OR tribalLanguage = :language)
-        AND (:grade IS NULL OR grade = :grade)
+        AND (:grade IS NULL OR grade LIKE '%' || :grade || '%')
         AND (
             lessonTextHindi LIKE '%' || :query || '%' 
             OR topic LIKE '%' || :query || '%' 
@@ -140,6 +146,10 @@ interface CurriculumDao {
             OR tribalLessonText LIKE '%' || :query || '%' 
             OR transliterationLatin LIKE '%' || :query || '%'
             OR culturalContextTag LIKE '%' || :query || '%'
+            OR tribalNativeScriptText LIKE '%' || :query || '%'
+            OR transliterationDevanagari LIKE '%' || :query || '%'
+            OR learningOutcomeCode LIKE '%' || :query || '%'
+            OR subject LIKE '%' || :query || '%'
         )
         ORDER BY grade ASC, chapterNumber ASC
     """)

@@ -56,7 +56,7 @@ export class LessonsService {
 
   create(payload: any): Lesson {
     const newLesson: Lesson = {
-      id: `LES-${Date.now().toString().slice(-6)}`,
+      id: `LES-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
       schoolId: payload.schoolId || 'SCH-DUMKA-042',
       teacherId: payload.teacherId || 'USR-001',
       curriculumNodeId: payload.curriculumNodeId || 'JCERT_G2_EVS_01',

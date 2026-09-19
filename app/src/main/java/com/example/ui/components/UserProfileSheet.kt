@@ -3,6 +3,7 @@ package com.example.ui.components
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.domain.model.AppUserMode
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.MainViewModel
 
@@ -31,14 +33,16 @@ fun UserProfileSheet(
     modifier: Modifier = Modifier
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
+    val appUserMode by viewModel.appUserMode.collectAsState()
     val pendingOutboxCount by viewModel.pendingOutboxCount.collectAsState()
     val context = LocalContext.current
+    val glass = LocalGlassColors.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = GlassSurfaceFloating,
-        scrimColor = CoffeeBackgroundDark.copy(alpha = 0.45f),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        containerColor = glass.surfaceFloating,
+        scrimColor = BhashaBackgroundDark.copy(alpha = 0.5f),
         modifier = modifier
     ) {
         Column(
@@ -52,7 +56,7 @@ fun UserProfileSheet(
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
-                border = BorderStroke(1.5.dp, GlassBorderLight),
+                border = BorderStroke(1.5.dp, glass.borderLight),
                 modifier = Modifier.size(72.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -76,7 +80,7 @@ fun UserProfileSheet(
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer,
-                    border = BorderStroke(1.dp, GlassBorderLight)
+                    border = BorderStroke(1.dp, glass.borderLight)
                 ) {
                     Text(
                         text = userProfile.role,
@@ -88,12 +92,58 @@ fun UserProfileSheet(
                 }
             }
 
-            HorizontalDivider(color = GlassBorderLight)
+            HorizontalDivider(color = glass.borderLight)
+
+            // Role / Persona Switcher Section
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "सक्रिय भूमिका (Active App Persona):",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AppUserMode.entries.forEach { mode ->
+                        val isSelected = appUserMode == mode
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else glass.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary else glass.borderLight
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    viewModel.setAppUserMode(mode)
+                                }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(mode.iconEmoji, fontSize = 22.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = mode.shortLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             // School & Location Card
             GlassmorphicCard(
                 shape = RoundedCornerShape(16.dp),
-                containerColor = GlassSurfaceLight,
+                containerColor = glass.surface,
                 elevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -137,7 +187,7 @@ fun UserProfileSheet(
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, GlassBorderLight),
+                    border = BorderStroke(1.dp, glass.borderLight),
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(
@@ -152,7 +202,7 @@ fun UserProfileSheet(
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, GlassBorderLight),
+                    border = BorderStroke(1.dp, glass.borderLight),
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(
@@ -190,14 +240,14 @@ fun UserProfileSheet(
                             label = { Text(role, style = MaterialTheme.typography.labelSmall) },
                             shape = RoundedCornerShape(10.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = GlassSurfaceLight,
+                                containerColor = glass.surface,
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedLabelColor = MaterialTheme.colorScheme.primary
                             ),
                             border = FilterChipDefaults.filterChipBorder(
                                 enabled = true,
                                 selected = isCurrent,
-                                borderColor = GlassBorderLight,
+                                borderColor = glass.borderLight,
                                 selectedBorderColor = MaterialTheme.colorScheme.primary
                             ),
                             modifier = Modifier.weight(1f)
@@ -215,7 +265,7 @@ fun UserProfileSheet(
                     Toast.makeText(context, "Google Firebase & Room DB सिंक्रनाइज़ हो गए", Toast.LENGTH_SHORT).show()
                     onDismiss()
                 },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -229,8 +279,8 @@ fun UserProfileSheet(
 
             OutlinedButton(
                 onClick = onDismiss,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, GlassBorderLight),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -242,4 +292,3 @@ fun UserProfileSheet(
         }
     }
 }
-

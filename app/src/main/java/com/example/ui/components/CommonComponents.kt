@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,73 +32,86 @@ import com.example.domain.model.GradeLevel
 import com.example.domain.model.SubjectArea
 import com.example.domain.model.TargetLanguage
 import com.example.ui.theme.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 
 /**
- * Ambient Light Coffee Gradient Background Canvas with warm mocha & cream glows.
- * Provides authentic optical backdrop refraction for all frosted glassmorphic elements.
+ * Modern BhashaSetu Collective Atmospheric Canvas Background.
+ * Provides subtle, clean optical backdrop refraction with Educational Teal and Slate tones.
  */
 @Composable
-fun AmbientCoffeeBackground(
+fun BhashaSetuBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
+    val topColor = if (isDark) BhashaBackgroundDark else BhashaAtmosphereTop
+    val midColor = if (isDark) BhashaSurfaceDark else BhashaAtmosphereMid
+    val botColor = if (isDark) BhashaBackgroundDark else BhashaAtmosphereBottom
+    val glowTeal = if (isDark) Color(0x182DD4BF) else BhashaAtmosphereTeal
+    val glowNavy = if (isDark) Color(0x221E293B) else BhashaAtmosphereNavy
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
-                // Base vertical canvas gradient: Light Coffee Latte
+                // Base vertical canvas gradient
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            CoffeeAmbientTop,
-                            CoffeeAmbientMid,
-                            CoffeeAmbientBottom
+                            topColor,
+                            midColor,
+                            botColor
                         )
                     )
                 )
-                // Top-right warm caramel coffee orb glow
+                // Top-right subtle Educational Teal atmospheric glow
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(CoffeeGlowWarm, Color.Transparent),
-                        center = Offset(size.width * 0.9f, size.height * 0.15f),
-                        radius = size.width * 0.7f
+                        colors = listOf(glowTeal, Color.Transparent),
+                        center = Offset(size.width * 0.9f, size.height * 0.12f),
+                        radius = size.width * 0.75f
                     ),
-                    radius = size.width * 0.7f,
-                    center = Offset(size.width * 0.9f, size.height * 0.15f)
+                    radius = size.width * 0.75f,
+                    center = Offset(size.width * 0.9f, size.height * 0.12f)
                 )
-                // Bottom-left subtle roasted mocha orb glow
+                // Bottom-left subtle Slate Navy atmospheric glow
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(CoffeeGlowMocha, Color.Transparent),
-                        center = Offset(size.width * 0.1f, size.height * 0.85f),
-                        radius = size.width * 0.8f
+                        colors = listOf(glowNavy, Color.Transparent),
+                        center = Offset(size.width * 0.1f, size.height * 0.88f),
+                        radius = size.width * 0.85f
                     ),
-                    radius = size.width * 0.8f,
-                    center = Offset(size.width * 0.1f, size.height * 0.85f)
+                    radius = size.width * 0.85f,
+                    center = Offset(size.width * 0.1f, size.height * 0.88f)
                 )
             },
         content = content
     )
 }
 
+
 /**
  * Reusable Glassmorphism Card Container.
- * Features frosted milky translucency, dual-layer light-gradient hairline border, and gentle depth elevation.
+ * Features clean institutional translucency, dual-layer light-gradient hairline border, and gentle depth elevation.
  */
 @Composable
 fun GlassmorphicCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(22.dp),
-    containerColor: Color = GlassSurfaceLight,
+    shape: Shape = RoundedCornerShape(18.dp),
+    containerColor: Color = LocalGlassColors.current.surface,
     borderBrush: Brush = Brush.linearGradient(
         colors = listOf(
-            GlassBorderHighlight,
-            GlassBorderLight,
-            GlassBorderHighlight.copy(alpha = 0.4f)
+            LocalGlassColors.current.borderHighlight,
+            LocalGlassColors.current.borderLight,
+            LocalGlassColors.current.borderHighlight.copy(alpha = 0.3f)
         )
     ),
-    borderWidth: Dp = 1.2.dp,
-    elevation: Dp = 3.dp,
+    borderWidth: Dp = 1.dp,
+    elevation: Dp = 2.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
@@ -106,8 +120,7 @@ fun GlassmorphicCard(
         tonalElevation = elevation,
         shadowElevation = elevation,
         border = BorderStroke(borderWidth, borderBrush),
-        modifier = modifier
-            .clip(shape)
+        modifier = modifier.clip(shape)
     ) {
         Column(content = content)
     }
@@ -119,9 +132,9 @@ fun GlassmorphicCard(
 @Composable
 fun GlassmorphicSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(16.dp),
-    containerColor: Color = GlassSurfaceTinted,
-    borderColor: Color = GlassBorderLight,
+    shape: Shape = RoundedCornerShape(14.dp),
+    containerColor: Color = LocalGlassColors.current.surfaceTinted,
+    borderColor: Color = LocalGlassColors.current.borderLight,
     borderWidth: Dp = 1.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
@@ -135,12 +148,116 @@ fun GlassmorphicSurface(
     }
 }
 
+
+/**
+ * Accessible, tactile icon button conforming to UI/UX Pro Max standards.
+ * Guarantees minimum 48x48dp interactive touch target bounds, Material 3 ripple,
+ * and semantic accessibility content description.
+ */
+@Composable
+fun BhashaIconButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    containerColor: Color = Color.Transparent,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    enabled: Boolean = true,
+    size: Dp = 48.dp,
+    iconSize: Dp = 22.dp
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = CircleShape,
+        color = containerColor,
+        contentColor = contentColor,
+        modifier = modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .size(size)
+            .semantics {
+                this.contentDescription = contentDescription
+                this.role = Role.Button
+            }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (enabled) contentColor else contentColor.copy(alpha = 0.38f),
+                modifier = Modifier.size(iconSize)
+            )
+        }
+    }
+}
+
+/**
+ * Accessible tactile action pill with icon, text, minimum 48dp touch bounds,
+ * and smooth interactive state feedback.
+ */
+@Composable
+fun BhashaActionPill(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    isSelected: Boolean = false,
+    selectedColor: Color = MaterialTheme.colorScheme.primary,
+    containerColor: Color = LocalGlassColors.current.surface,
+    borderColor: Color = LocalGlassColors.current.borderLight,
+    contentDescription: String? = null
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = if (isSelected) selectedColor.copy(alpha = 0.14f) else containerColor,
+        border = BorderStroke(
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) selectedColor else borderColor
+        ),
+        shadowElevation = if (isSelected) 2.dp else 0.dp,
+        modifier = modifier
+            .heightIn(min = 44.dp)
+            .minimumInteractiveComponentSize()
+            .clip(RoundedCornerShape(14.dp))
+            .semantics {
+                if (contentDescription != null) {
+                    this.contentDescription = contentDescription
+                }
+                this.role = Role.Button
+                this.selected = isSelected
+            }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) selectedColor else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
 @Composable
 fun LanguageSelectorChipRow(
     selectedLanguage: TargetLanguage,
     onLanguageSelected: (TargetLanguage) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val glass = LocalGlassColors.current
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = "लक्ष्य मातृभाषा (Target Language):",
@@ -153,7 +270,7 @@ fun LanguageSelectorChipRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TargetLanguage.values().forEach { lang ->
+            TargetLanguage.entries.forEach { lang ->
                 val isSelected = lang == selectedLanguage
                 val accentColor = when (lang) {
                     TargetLanguage.SANTHALI -> SanthaliAccent
@@ -162,24 +279,31 @@ fun LanguageSelectorChipRow(
                 }
                 
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (isSelected) accentColor.copy(alpha = 0.15f) else GlassSurfaceLight,
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isSelected) accentColor.copy(alpha = 0.14f) else glass.surface,
                     border = if (isSelected) {
                         BorderStroke(2.dp, accentColor)
                     } else {
-                        BorderStroke(1.dp, GlassBorderLight)
+                        BorderStroke(1.dp, glass.borderLight)
                     },
                     shadowElevation = if (isSelected) 3.dp else 1.dp,
                     modifier = Modifier
                         .weight(1f)
+                        .heightIn(min = 52.dp)
                         .minimumInteractiveComponentSize()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .clickable { onLanguageSelected(lang) }
+                        .semantics {
+                            contentDescription = "${lang.displayName} (${lang.nativeName}), ${if (isSelected) "selected" else "not selected"}"
+                            role = Role.RadioButton
+                            selected = isSelected
+                        }
                         .testTag("lang_chip_${lang.code}")
                 ) {
                     Column(
                         modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
                             text = lang.displayName,
@@ -205,6 +329,7 @@ fun GradeSelectorChipRow(
     onGradeSelected: (GradeLevel) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val glass = LocalGlassColors.current
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = "कक्षा स्तर (FLN Grade):",
@@ -217,7 +342,7 @@ fun GradeSelectorChipRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            GradeLevel.values().take(3).forEach { grade ->
+            GradeLevel.entries.take(3).forEach { grade ->
                 val isSelected = grade == selectedGrade
                 FilterChip(
                     selected = isSelected,
@@ -229,19 +354,28 @@ fun GradeSelectorChipRow(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = GlassSurfaceLight,
+                        containerColor = glass.surface,
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
                         selected = isSelected,
-                        borderColor = GlassBorderLight,
+                        borderColor = glass.borderLight,
                         selectedBorderColor = MaterialTheme.colorScheme.primary
                     ),
-                    modifier = Modifier.weight(1f).testTag("grade_chip_${grade.name}")
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .minimumInteractiveComponentSize()
+                        .semantics {
+                            contentDescription = "${grade.label}, ${if (isSelected) "selected" else "not selected"}"
+                            role = Role.RadioButton
+                            selected = isSelected
+                        }
+                        .testTag("grade_chip_${grade.name}")
                 )
             }
         }
@@ -256,9 +390,9 @@ fun QualityScoreBadge(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(SuccessGreen.copy(alpha = 0.12f))
-            .border(1.dp, SuccessGreen.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+            .border(1.dp, SuccessGreen.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -286,12 +420,12 @@ fun LatencyBadge(
     val isBudgetMet = latencyMs <= 3000L
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isBudgetMet) MaterialTheme.colorScheme.primaryContainer else WarningAmber.copy(alpha = 0.15f))
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isBudgetMet) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f) else WarningAmber.copy(alpha = 0.15f))
             .border(
                 1.dp,
-                if (isBudgetMet) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else WarningAmber.copy(alpha = 0.4f),
-                RoundedCornerShape(12.dp)
+                if (isBudgetMet) MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f) else WarningAmber.copy(alpha = 0.4f),
+                RoundedCornerShape(10.dp)
             )
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -300,14 +434,14 @@ fun LatencyBadge(
         Icon(
             imageVector = Icons.Default.Bolt,
             contentDescription = "Latency",
-            tint = if (isBudgetMet) MaterialTheme.colorScheme.primary else WarningAmber,
+            tint = if (isBudgetMet) MaterialTheme.colorScheme.secondary else WarningAmber,
             modifier = Modifier.size(14.dp)
         )
         Text(
-            text = "$latencyMs ms (${if (isBudgetMet) "⚡ ≤3s Budget Met" else "High latency"})",
+            text = "$latencyMs ms (${if (isBudgetMet) "≤3s Target Met" else "High latency"})",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = if (isBudgetMet) MaterialTheme.colorScheme.primary else WarningAmber
+            color = if (isBudgetMet) MaterialTheme.colorScheme.secondary else WarningAmber
         )
     }
 }
@@ -319,6 +453,7 @@ fun SectionHeader(
     icon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
+    val glass = LocalGlassColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -330,7 +465,7 @@ fun SectionHeader(
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
-                border = BorderStroke(1.dp, GlassBorderLight),
+                border = BorderStroke(1.dp, glass.borderLight),
                 modifier = Modifier.size(36.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -361,4 +496,124 @@ fun SectionHeader(
     }
 }
 
+/**
+ * Stitch Status Dot Badge (from Stitch Design System).
+ * Renders a compact badge with a 6dp circular status dot and bold label.
+ * Example: ● Ready, ● Room DB रेडी, ● 100% ऑफ़लाइन.
+ */
+@Composable
+fun StitchStatusDotBadge(
+    label: String,
+    statusColor: Color = BhashaTealSecondary,
+    containerColor: Color = statusColor.copy(alpha = 0.12f),
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.3f)),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.5.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = statusColor,
+                fontSize = 11.sp
+            )
+        }
+    }
+}
+
+/**
+ * Stitch Tag Pill for pedagogical metadata (JCERT LO, Bloom's level, Cultural context).
+ */
+@Composable
+fun StitchTagPill(
+    text: String,
+    icon: ImageVector? = null,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+    borderColor: Color = color.copy(alpha = 0.25f),
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, borderColor),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = color
+            )
+        }
+    }
+}
+
+/**
+ * Stitch Metric Card for display strips in hero sections.
+ */
+@Composable
+fun StitchStatMetric(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    containerColor: Color = Color.White.copy(alpha = 0.15f),
+    borderColor: Color = Color.White.copy(alpha = 0.25f),
+    textColor: Color = Color.White
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, borderColor),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = textColor
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
+                color = textColor.copy(alpha = 0.85f),
+                maxLines = 1
+            )
+        }
+    }
+}
 

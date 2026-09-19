@@ -15,8 +15,13 @@ import com.example.domain.model.RagCurriculumMatch
 import com.example.domain.model.RagQueryContext
 import com.example.domain.model.TargetLanguage
 import com.example.domain.model.UserProfile
+import com.example.domain.model.VoiceSpeakerRole
 import com.example.domain.model.VoiceTurn
+import com.example.domain.model.WorksheetQuestion
+import com.example.domain.model.toJsonString
+import com.example.domain.model.parseWorksheetQuestionsJson
 import com.example.domain.rag.LocalRagEmbeddingEngine
+import com.example.domain.voice.OfflineVoiceTranslationEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -58,6 +63,8 @@ class BhashaSetuRepository(private val context: Context) {
         studentDao.insertStudents(PreloadedData.defaultStudents)
         // Preload default lessons if empty
         PreloadedData.defaultLessons.forEach { lessonDao.insertLesson(it) }
+        // Preload default worksheets if empty
+        PreloadedData.defaultWorksheets.forEach { worksheetDao.insertWorksheet(it) }
         // Preload offline-first RAG curriculum content
         curriculumDao.insertAll(PreloadedData.defaultCurriculumChunks)
     }
@@ -313,9 +320,306 @@ class BhashaSetuRepository(private val context: Context) {
         )
     }
 
+    fun getWorksheetsForLesson(lessonId: String): Flow<List<WorksheetEntity>> =
+        worksheetDao.getWorksheetsForLesson(lessonId)
+
+    suspend fun getWorksheetById(id: String): WorksheetEntity? = withContext(Dispatchers.IO) {
+        worksheetDao.getWorksheetById(id)
+    }
+
+    suspend fun approveWorksheet(worksheetId: String) = withContext(Dispatchers.IO) {
+        worksheetDao.approveWorksheet(worksheetId)
+        outboxDao.enqueue(
+            OutboxEntity(
+                id = UUID.randomUUID().toString(),
+                operationId = "OP_${System.currentTimeMillis()}",
+                entityType = "WORKSHEET",
+                operation = "APPROVE_WORKSHEET",
+                payloadJson = JSONObject().apply {
+                    put("worksheetId", worksheetId)
+                    put("approvedAt", System.currentTimeMillis())
+                }.toString(),
+                sequenceNumber = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun generateBilingualWorksheet(lesson: LessonEntity): WorksheetEntity = withContext(Dispatchers.IO) {
+        val apiKey = BuildConfig.GEMINI_API_KEY
+        val worksheetId = "ws_${System.currentTimeMillis()}"
+        var questions: List<WorksheetQuestion> = emptyList()
+
+        if (apiKey.isNotEmpty() && apiKey != "MY_GEMINI_API_KEY") {
+            try {
+                val prompt = """
+                    You are an expert bilingual worksheet designer for primary students in Jharkhand (NIPUN Bharat MTB-MLE).
+                    Create an interactive 4-question bilingual formative assessment worksheet based on this lesson:
+                    Title: ${lesson.title}
+                    Grade: ${lesson.grade}
+                    Subject: ${lesson.subject}
+                    Target Language: ${lesson.targetLanguage}
+                    Lesson Content: ${lesson.adaptedExplanation}
+                    Script: ${lesson.nativeScriptText}
+                    Transliteration: ${lesson.transliterationText}
+                    Cultural Context: ${lesson.culturalAnalogy}
+
+                    Output a strict JSON array of 4 question objects:
+                    [
+                      {
+                        "id": "q1",
+                        "questionHindi": "Hindi question text",
+                        "questionTarget": "Native script question in ${lesson.targetLanguage}",
+                        "type": "MCQ",
+                        "options": ["A. option1", "B. option2", "C. option3", "D. option4"],
+                        "correctAnswer": "A. option1",
+                        "localContextHint": "Culturally grounded pedagogical hint"
+                      },
+                      {
+                        "id": "q2",
+                        "questionHindi": "Matching question in Hindi",
+                        "questionTarget": "Target script matching prompt",
+                        "type": "MATCH",
+                        "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+                        "correctAnswer": "A. ...",
+                        "localContextHint": "Hint"
+                      },
+                      {
+                        "id": "q3",
+                        "questionHindi": "True/False statement in Hindi",
+                        "questionTarget": "Target script statement",
+                        "type": "TRUE_FALSE",
+                        "options": ["A. सही", "B. गलत"],
+                        "correctAnswer": "A. सही",
+                        "localContextHint": "Hint"
+                      },
+                      {
+                        "id": "q4",
+                        "questionHindi": "Oral recitation or action in Hindi",
+                        "questionTarget": "Oral prompt in ${lesson.targetLanguage}",
+                        "type": "ORAL_PRACTICE",
+                        "options": ["A. ...", "B. ..."],
+                        "correctAnswer": "A. ...",
+                        "localContextHint": "Hint"
+                      }
+                    ]
+                """.trimIndent()
+
+                val request = GeminiGenerateRequest(
+                    contents = listOf(
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(text = prompt)))
+                    ),
+                    generationConfig = GeminiGenerationConfig(
+                        temperature = 0.2f
+                    )
+                )
+                val response = GeminiApiClient.service.generateContent(
+                    model = "gemini-2.5-flash",
+                    apiKey = apiKey,
+                    request = request
+                )
+                val rawJson = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: ""
+                val cleanJson = rawJson.replace("```json", "").replace("```", "").trim()
+                val parsed = parseWorksheetQuestionsJson(cleanJson)
+                if (parsed.isNotEmpty()) {
+                    questions = parsed
+                }
+            } catch (e: Exception) {
+                // Fall back gracefully to offline generator
+            }
+        }
+
+        if (questions.isEmpty()) {
+            questions = generateOfflineBilingualQuestions(lesson)
+        }
+
+        val worksheet = WorksheetEntity(
+            id = worksheetId,
+            lessonId = lesson.id,
+            title = "${lesson.title} - कार्यपत्रक",
+            grade = lesson.grade,
+            targetLanguage = lesson.targetLanguage,
+            instructions = "निर्देश: सभी प्रश्नों को ध्यान से पढ़ें और अपनी मातृभाषा (${lesson.targetLanguage}) व हिन्दी में हल करें।",
+            questionsJson = questions.toJsonString(),
+            isApproved = false,
+            createdAt = System.currentTimeMillis()
+        )
+
+        worksheetDao.insertWorksheet(worksheet)
+        worksheet
+    }
+
+    private fun generateOfflineBilingualQuestions(lesson: LessonEntity): List<WorksheetQuestion> {
+        val lang = lesson.targetLanguage.lowercase()
+        return when {
+            lang.contains("santhali") || lang.contains("संथाली") -> listOf(
+                WorksheetQuestion(
+                    id = "q1",
+                    questionHindi = "पाठ के अनुसार मुख्य विषय या शब्द को पहचानें:",
+                    questionTarget = "ᱯᱟᱴᱷ ᱞᱮᱠᱟᱛᱮ ᱢᱩᱞ ᱟᱹᱲᱟᱹ ᱪᱤᱱᱦᱟᱹᱣ ᱢᱮ: ${lesson.nativeScriptText.take(40)}",
+                    type = "MCQ",
+                    options = listOf(
+                        "A. ${lesson.nativeScriptText.take(25)}",
+                        "B. ᱫᱟᱜ (Dah / जल)",
+                        "C. ᱵᱤᱨ (Bir / जंगल)",
+                        "D. ᱥᱟᱦᱟᱱ (Sahan / लकड़ी)"
+                    ),
+                    correctAnswer = "A. ${lesson.nativeScriptText.take(25)}",
+                    localContextHint = lesson.culturalAnalogy.ifBlank { "संथाली लोक-संस्कृति में प्रकृति के साथ एकात्मता सिखाई जाती है।" }
+                ),
+                WorksheetQuestion(
+                    id = "q2",
+                    questionHindi = "सही अर्थ की जोड़ी बनाएं:",
+                    questionTarget = "ᱡᱚᱲ ᱵᱮᱱᱟᱣ ᱢᱮ (Match the meaning):",
+                    type = "MATCH",
+                    options = listOf(
+                        "A. ${lesson.transliterationText.take(20)} → स्थानीय मातृभाषा",
+                        "B. ᱫᱟᱠᱟ → भात / भोजन",
+                        "C. ᱥᱤᱝ → सूर्य / दिन",
+                        "D. ᱦᱚᱭ → स्वच्छ हवा"
+                    ),
+                    correctAnswer = "A. ${lesson.transliterationText.take(20)} → स्थानीय मातृभाषा",
+                    localContextHint = "अपने घर में बोली जाने वाली संथाली शब्दावली से मिलान करें।"
+                ),
+                WorksheetQuestion(
+                    id = "q3",
+                    questionHindi = "सही या गलत: क्या यह गतिविधि पर्यावरण व हमारे समाज के लिए उपयोगी है?",
+                    questionTarget = "ᱥᱟᱹᱨᱤ ᱥᱮ ᱮᱲᱮ: ᱱᱚᱣᱟ ᱠᱟᱹᱢᱤ ᱟᱵᱚᱣᱟᱜ ᱥᱟᱶᱛᱟ ᱞᱟᱹᱜᱤᱫ ᱵᱷᱟᱹᱞᱟᱹᱭ ᱜᱮᱭᱟ?",
+                    type = "TRUE_FALSE",
+                    options = listOf(
+                        "A. सही (ᱥᱟᱹᱨᱤ)",
+                        "B. गलत (ᱮᱲᱮ)"
+                    ),
+                    correctAnswer = "A. सही (ᱥᱟᱹᱨᱤ)",
+                    localContextHint = "पेड़, जल और स्वच्छता गाँव के हर बच्चे के स्वास्थ्य के लिए आवश्यक हैं।"
+                ),
+                WorksheetQuestion(
+                    id = "q4",
+                    questionHindi = "कक्षा गतिविधि व मौखिक उच्चारण:",
+                    questionTarget = "ᱠᱟᱹᱢᱤ ᱟᱨ ᱨᱚᱲ ᱟᱵᱷᱭᱟᱥ: ${lesson.activityPrompt.ifBlank { "ᱡᱚᱦᱟᱨ (Johar) कहकर शिक्षक का अभिवादन करें।" }}",
+                    type = "ORAL_PRACTICE",
+                    options = listOf(
+                        "A. ᱡᱚᱦᱟᱨ (Johar - अभिवादन दोहराएं)",
+                        "B. ᱫᱟᱨᱮ ᱵᱚᱱ ᱡᱚᱛᱚᱱᱟ (Dare bon jotona - पेड़ों की रक्षा करें)"
+                    ),
+                    correctAnswer = "A. ᱡᱚᱦᱟᱨ (Johar - अभिवादन दोहराएं)",
+                    localContextHint = lesson.pronunciationGuide.ifBlank { "संथाली के कोमल स्वरों का अभ्यास करें।" }
+                )
+            )
+            lang.contains("ho") || lang.contains("हो") -> listOf(
+                WorksheetQuestion(
+                    id = "q1",
+                    questionHindi = "हो (Ho) भाषा में पाठ का मुख्य शब्द पहचानें:",
+                    questionTarget = "ᱦᱳ ᱛᱮ ᱯᱟᱴᱷ ᱨᱮᱱᱟᱜ ᱢᱩᱞ ᱟᱹᱲᱟᱹ ᱪᱮᱫ ᱠᱟᱱᱟ?",
+                    type = "MCQ",
+                    options = listOf(
+                        "A. ${lesson.nativeScriptText.take(25)}",
+                        "B. ᱢᱤᱭᱟᱹᱫᱽ (Miyad / एक)",
+                        "C. ᱫᱟᱨᱩ (Daru / पेड़)",
+                        "D. ᱫᱟᱜ (Da' / पानी)"
+                    ),
+                    correctAnswer = "A. ${lesson.nativeScriptText.take(25)}",
+                    localContextHint = lesson.culturalAnalogy.ifBlank { "हो भाषा कोल्हान और चाईबासा क्षेत्र में बोली जाती है।" }
+                ),
+                WorksheetQuestion(
+                    id = "q2",
+                    questionHindi = "हो भाषा में संख्या या शब्द की सही जोड़ी पहचानें:",
+                    questionTarget = "ᱦᱳ ᱛᱮ ᱥᱟᱹᱨᱤ ᱡᱚᱲ ᱵᱟᱪᱷᱟᱣ ᱢᱮ:",
+                    type = "MATCH",
+                    options = listOf(
+                        "A. ᱢᱤᱭᱟᱹᱫᱽ (Miyad) = 1 (एक)",
+                        "B. ᱵᱟᱨᱤᱭᱟ (Bariya) = 2 (दो)",
+                        "C. ᱟᱹᱯᱤᱭᱟᱹ (Apiya) = 3 (तीन)",
+                        "D. उपरोक्त सभी सही हैं"
+                    ),
+                    correctAnswer = "D. उपरोक्त सभी सही हैं",
+                    localContextHint = "स्थानीय हाट में वस्तुएं गिनते समय इन संख्याओं का प्रयोग करें।"
+                ),
+                WorksheetQuestion(
+                    id = "q3",
+                    questionHindi = "सही या गलत: क्या गाँव में महुआ और साल के पेड़ हमारे जीवनदाता हैं?",
+                    questionTarget = "ᱥᱟᱹᱨᱤ ᱥᱮ ᱮᱲᱮ: ᱫᱟᱨᱩ ᱟᱵᱚᱣᱟᱜ ᱡᱤᱣᱤ ᱞᱟᱹᱜᱤᱫ ᱡᱟᱹᱨᱩᱲ ᱜᱮᱭᱟ?",
+                    type = "TRUE_FALSE",
+                    options = listOf(
+                        "A. सही (ᱥᱟᱹᱨᱤ)",
+                        "B. गलत (ᱮᱲᱮ)"
+                    ),
+                    correctAnswer = "A. सही (ᱥᱟᱹᱨᱤ)",
+                    localContextHint = "वन और प्रकृति हमारे पूर्वजों की अमूल्य धरोहर हैं।"
+                ),
+                WorksheetQuestion(
+                    id = "q4",
+                    questionHindi = "कक्षा गतिविधि:",
+                    questionTarget = "ᱠᱟᱹᱢᱤ: ${lesson.activityPrompt.ifBlank { "1 से 5 तक गिनती हो भाषा में बोलकर सुनाएं।" }}",
+                    type = "ORAL_PRACTICE",
+                    options = listOf(
+                        "A. Miyad, Bariya, Apiya बोलें",
+                        "B. जोहार बोलें"
+                    ),
+                    correctAnswer = "A. Miyad, Bariya, Apiya बोलें",
+                    localContextHint = lesson.pronunciationGuide.ifBlank { "स्पष्ट व धीमे स्वर में उच्चारण करें।" }
+                )
+            )
+            else -> listOf(
+                WorksheetQuestion(
+                    id = "q1",
+                    questionHindi = "मुण्डारी भाषा में पाठ का मुख्य शब्द पहचानें:",
+                    questionTarget = "मुण्डारी ते पाठ राः मूल शब्द चेद तना?",
+                    type = "MCQ",
+                    options = listOf(
+                        "A. ${lesson.nativeScriptText.take(25)}",
+                        "B. दाः (Dah / पानी)",
+                        "C. दारू (Daru / पेड़)",
+                        "D. हातू (Hatu / गाँव)"
+                    ),
+                    correctAnswer = "A. ${lesson.nativeScriptText.take(25)}",
+                    localContextHint = lesson.culturalAnalogy.ifBlank { "मुण्डारी भाषा खूंटी, रांची और गुमला में व्यापक रूप से बोली जाती है।" }
+                ),
+                WorksheetQuestion(
+                    id = "q2",
+                    questionHindi = "मुण्डारी शब्द का सही मिलान करें:",
+                    questionTarget = "मुण्डारी शब्द राः सही मिलान रीकाए पे:",
+                    type = "MATCH",
+                    options = listOf(
+                        "A. दाः (Dah) = जल / पानी",
+                        "B. दारू (Daru) = वृक्ष / पेड़",
+                        "C. बुरू (Buru) = पर्वत / पहाड़",
+                        "D. उपरोक्त सभी सत्य हैं"
+                    ),
+                    correctAnswer = "D. उपरोक्त सभी सत्य हैं",
+                    localContextHint = "गाँव के प्राकृतिक वातावरण से शब्द जोड़ें।"
+                ),
+                WorksheetQuestion(
+                    id = "q3",
+                    questionHindi = "सही या गलत: जल ही जीवन है और हमें पानी साफ़ रखना चाहिए।",
+                    questionTarget = "सारि या एड़े: दाः गे जीवन तना, दाः साफा दोहोए दरकार?",
+                    type = "TRUE_FALSE",
+                    options = listOf(
+                        "A. सही (सारि / Sari)",
+                        "B. गलत (एड़े / Ede)"
+                    ),
+                    correctAnswer = "A. सही (सारि / Sari)",
+                    localContextHint = "नदी व कुएं के जल को स्वच्छ रखना हर ग्रामीण का धर्म है।"
+                ),
+                WorksheetQuestion(
+                    id = "q4",
+                    questionHindi = "मौखिक अभिव्यक्ति अभ्यास:",
+                    questionTarget = "काजी अभ्यास: ${lesson.activityPrompt.ifBlank { "मुण्डारी में 'जोहार' कहकर कक्षा का स्वागत करें।" }}",
+                    type = "ORAL_PRACTICE",
+                    options = listOf(
+                        "A. जोहार! (Johar)",
+                        "B. मारंग बुरू (Marang Buru)"
+                    ),
+                    correctAnswer = "A. जोहार! (Johar)",
+                    localContextHint = lesson.pronunciationGuide.ifBlank { "धीमे और आदरपूर्वक स्वर में बोलें।" }
+                )
+            )
+        }
+    }
+
     suspend fun translateLiveVoiceTurn(
         hindiSpeechText: String,
-        targetLanguage: TargetLanguage
+        targetLanguage: TargetLanguage,
+        speakerRole: VoiceSpeakerRole = VoiceSpeakerRole.TEACHER
     ): VoiceTurn = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.GEMINI_API_KEY
         val startTime = System.currentTimeMillis()
@@ -324,8 +628,25 @@ class BhashaSetuRepository(private val context: Context) {
         var scriptText = ""
         var transliteration = ""
         var transliterationDevanagari = ""
+        var phoneticSyllables: List<String> = emptyList()
 
-        val systemPrompt = """
+        val isStudent = (speakerRole == VoiceSpeakerRole.STUDENT)
+
+        val systemPrompt = if (isStudent) {
+            """
+            You are a real-time classroom speech translation engine translating tribal student speech in ${targetLanguage.displayName} (${targetLanguage.nativeName}) into Hindi for the teacher.
+            Target response time is SUB-3 SECONDS.
+            Provide JSON with:
+            {
+               "targetText": "student original or normalized tribal phrase in ${targetLanguage.displayName}",
+               "scriptText": "native script text (Ol Chiki/Warang Chiti/Devanagari)",
+               "transliteration": "Roman pronunciation",
+               "transliterationDevanagari": "Hindi comprehension translation for teacher",
+               "syllables": ["list", "of", "phonetic", "syllables"]
+            }
+            """.trimIndent()
+        } else {
+            """
             You are a real-time speech translation engine for classroom Hindi to ${targetLanguage.displayName} (${targetLanguage.nativeName}).
             Target response time is SUB-3 SECONDS.
             Provide JSON with:
@@ -333,15 +654,18 @@ class BhashaSetuRepository(private val context: Context) {
                "targetText": "spoken sentence in ${targetLanguage.displayName}",
                "scriptText": "native script text (Ol Chiki/Warang Chiti/Devanagari)",
                "transliteration": "Roman pronunciation",
-               "transliterationDevanagari": "Devanagari phonetic pronunciation for Indian text-to-speech engine"
+               "transliterationDevanagari": "Devanagari phonetic pronunciation for Indian text-to-speech engine",
+               "syllables": ["list", "of", "phonetic", "syllables"]
             }
-        """.trimIndent()
+            """.trimIndent()
+        }
 
         if (apiKey.isNotEmpty() && apiKey != "MY_GEMINI_API_KEY") {
             try {
+                val promptPrefix = if (isStudent) "Translate student tribal speech to Hindi: " else "Translate for primary student: "
                 val request = GeminiGenerateRequest(
                     contents = listOf(
-                        GeminiContent(role = "user", parts = listOf(GeminiPart(text = "Translate for primary student: $hindiSpeechText")))
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(text = "$promptPrefix$hindiSpeechText")))
                     ),
                     generationConfig = GeminiGenerationConfig(
                         temperature = 0.2f
@@ -372,39 +696,52 @@ class BhashaSetuRepository(private val context: Context) {
                     scriptText = obj.optString("scriptText", targetLanguage.nativeName)
                     transliteration = obj.optString("transliteration", "")
                     transliterationDevanagari = obj.optString("transliterationDevanagari", "")
+                    val sylArr = obj.optJSONArray("syllables")
+                    if (sylArr != null && sylArr.length() > 0) {
+                        phoneticSyllables = (0 until sylArr.length()).map { sylArr.getString(it) }
+                    }
                 } catch (e: Exception) {
                     targetTranslation = raw
                 }
             } catch (e: Exception) {
-                val fallback = getOfflineQuickTranslationData(hindiSpeechText, targetLanguage)
+                val fallback = OfflineVoiceTranslationEngine.translate(hindiSpeechText, targetLanguage, speakerRole)
                 targetTranslation = fallback.targetText
                 scriptText = fallback.scriptText
                 transliteration = fallback.transliteration
                 transliterationDevanagari = fallback.transliterationDevanagari
+                phoneticSyllables = fallback.phoneticSyllables
             }
         } else {
-            val fallback = getOfflineQuickTranslationData(hindiSpeechText, targetLanguage)
+            val fallback = OfflineVoiceTranslationEngine.translate(hindiSpeechText, targetLanguage, speakerRole)
             targetTranslation = fallback.targetText
             scriptText = fallback.scriptText
             transliteration = fallback.transliteration
             transliterationDevanagari = fallback.transliterationDevanagari
+            phoneticSyllables = fallback.phoneticSyllables
         }
 
         if (transliterationDevanagari.isBlank()) {
-            transliterationDevanagari = getOfflineQuickTranslationData(hindiSpeechText, targetLanguage).transliterationDevanagari
+            val fallback = OfflineVoiceTranslationEngine.translate(hindiSpeechText, targetLanguage, speakerRole)
+            transliterationDevanagari = fallback.transliterationDevanagari
+            if (phoneticSyllables.isEmpty()) {
+                phoneticSyllables = fallback.phoneticSyllables
+            }
         }
 
         val latency = System.currentTimeMillis() - startTime
 
         VoiceTurn(
-            id = UUID.randomUUID().toString(),
-            isTeacher = true,
-            hindiText = hindiSpeechText,
+            id = "turn_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(4)}",
+            isTeacher = !isStudent,
+            speakerRole = speakerRole,
+            hindiText = if (isStudent) transliterationDevanagari else hindiSpeechText,
             targetText = targetTranslation,
             scriptText = scriptText,
             transliteration = transliteration,
             transliterationDevanagari = transliterationDevanagari,
-            latencyMs = latency
+            phoneticSyllables = phoneticSyllables,
+            latencyMs = latency,
+            timestamp = System.currentTimeMillis()
         )
     }
 
@@ -750,192 +1087,23 @@ class BhashaSetuRepository(private val context: Context) {
         }
     }
 
-    data class VoiceTranslationResult(
-        val targetText: String,
-        val scriptText: String,
-        val transliteration: String,
-        val transliterationDevanagari: String
-    )
+    companion object {
+        data class VoiceTranslationResult(
+            val targetText: String,
+            val scriptText: String,
+            val transliteration: String,
+            val transliterationDevanagari: String
+        )
 
-    fun getOfflineQuickTranslationData(hindi: String, lang: TargetLanguage): VoiceTranslationResult {
-        val lower = hindi.lowercase()
-        return when {
-            lower.contains("नमस्ते") || lower.contains("प्रणाम") || lower.contains("स्वागत") || lower.contains("welcome") -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ! ᱛᱮᱦᱮᱧ ᱫᱚ ᱟᱵᱚ ᱢᱤᱫ ᱛᱮ ᱵᱚᱱ ᱯᱟᱲᱦᱟᱣ-ᱟ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Johar gidra ko! Teheny do abo mit' te bon padhaw-a.",
-                        transliterationDevanagari = "जोहार गिदरा को! तेहेञ दो आबो मिद ते बोन पाढ़ाव-आ।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ! ᱛᱤᱥᱤᱝ ᱫᱚ ᱟᱵᱚ ᱢᱤᱭᱟᱹᱫᱽ ᱛᱮ ᱵᱚᱱ ᱪᱮᱫ-ᱟ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Johar gidra ko! Tising do abo miyad te bon ched-a.",
-                        transliterationDevanagari = "जोहार गिदरा को! तिसिंग दो आबो मियाद ते बोन चेद-आ।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "जोहार गिदरा को! तिसिंग दो आबु मियाद ते बु पढ़व-ए।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Johar gidra ko! Tising do abu miyad te bu padhaw-e.",
-                        transliterationDevanagari = "जोहार गिदरा को! तिसिंग दो आबु मियाद ते बु पढ़व-ए।"
-                    )
-                }
-            }
-            lower.contains("किताब") || lower.contains("पुस्तक") || lower.contains("खोल") || lower.contains("पाठ") -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱯᱚᱛᱚᱵ ᱡᱷᱤᱡᱽ ᱯᱮ ᱟᱨ ᱥᱮᱪᱮᱫ ᱯᱟᱲᱦᱟᱣ ᱯᱮ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Potob jhij pe ar seched padhaw pe.",
-                        transliterationDevanagari = "पोतोब झिज पे आर सेचेद पाढ़ाव पे।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱯᱩᱛᱷᱤ ᱠᱩᱞᱤ ᱯᱮ ᱟᱨ ᱪᱮᱫ ᱯᱮ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Puthi kuli pe ar ched pe.",
-                        transliterationDevanagari = "पुथी कुली पे आर चेद पे।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "पोतोब ओड़ोङ पे आर पढ़व पे।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Potob odong pe ar padhaw pe.",
-                        transliterationDevanagari = "पोतोब ओड़ोङ पे आर पढ़व पे।"
-                    )
-                }
-            }
-            lower.contains("पेड़") || lower.contains("साल") || lower.contains("वृक्ष") || lower.contains("जंगल") -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱱᱚᱣᱟ ᱫᱚ ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱮ ᱠᱟᱱᱟ, ᱵᱤᱨ ᱨᱮᱱᱟᱜ ᱡᱤᱣᱤ ᱠᱟᱱᱟ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Nowa do sarjom dare kana, bir renag jiwi kana.",
-                        transliterationDevanagari = "नोवा दो सारजोम दारे काना, बीर रेनाग जीवी काना।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱱᱮᱱᱟ ᱫᱚ ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱩ ᱛᱟᱱᱟ, ᱵᱤᱨ ᱨᱮᱭᱟᱜ ᱡᱤᱣᱤ ᱛᱟᱱᱟ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Nena do sarjom daru tana, bir reyag jiwi tana.",
-                        transliterationDevanagari = "नेना दो सारजोम दारू ताना, बीर रेयाग जीवी ताना।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "नेना दो सारजोम दारू तन, बिर रेयाः जीवी तन।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Nena do sarjom daru tan, bir reya jiwi tan.",
-                        transliterationDevanagari = "नेना दो सारजोम दारू तन, बिर रेयाः जीवी तन।"
-                    )
-                }
-            }
-            lower.contains("पानी") || lower.contains("जल") || lower.contains("नदी") || lower.contains("तालाब") -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱜᱟᱰᱟ ᱫᱟᱜ ᱟᱨ ᱯᱩᱠᱷᱨᱤ ᱫᱟᱜ ᱫᱚ ᱥᱟᱯᱷᱟ ᱫᱚᱦᱚᱭ ᱯᱮ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Gada dah ar pukhri dah do sapha dohoy pe.",
-                        transliterationDevanagari = "गाडा दाग आर पुखरी दाग दो साफा दोहोय पे।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱜᱟᱰᱟ ᱫᱟᱜ ᱫᱚ ᱟᱹᱵᱩᱣᱟᱜ ᱡᱤᱣᱤ ᱛᱟᱱᱟ, ᱥᱟᱯᱷᱟ ᱫᱚᱦᱚᱭ ᱯᱮ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Gada da' do abuwag jiwi tana, sapha dohoy pe.",
-                        transliterationDevanagari = "गाडा दाः दो आबुवाग जीवी ताना, साफा दोहोय पे।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "गाडा दाः दो आबुवाः जीवी तन, साफा दोहोय पे।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Gada daa do abuwaa jiwi tan, sapha dohoy pe.",
-                        transliterationDevanagari = "गाडा दाः दो आबुवाः जीवी तन, साफा दोहोय पे।"
-                    )
-                }
-            }
-            lower.contains("साथ") || lower.contains("बोल") || lower.contains("दोहरा") || lower.contains("repeat") -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱥᱟᱱᱟᱢ ᱜᱤᱫᱽᱨᱟᱹ ᱢᱤᱫ ᱛᱮ ᱞᱟᱹᱭ ᱯᱮ! ᱟᱹᱰᱤ ᱱᱟᱯᱟᱭ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Sanam gidra mit' te lay pe! Adi napay.",
-                        transliterationDevanagari = "सानाम गिदरा मिद ते लय पे! आडी नापाय।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱥᱚᱵᱮᱱ ᱜᱤᱫᱽᱨᱟᱹ ᱢᱤᱭᱟᱹᱫᱽ ᱛᱮ ᱠᱟᱡᱤ ᱯᱮ! ᱟᱹᱰᱤ ᱵᱮᱥ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Soben gidra miyad te kaji pe! Adi bes.",
-                        transliterationDevanagari = "सोबेन गिदरा मियाद ते काजी पे! आडी बेस।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "सोबेन गिदरा मियाद ते कजी पे! आडी बुगी।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Soben gidra miyad te kaji pe! Adi bugi.",
-                        transliterationDevanagari = "सोबेन गिदरा मियाद ते कजी पे! आडी बुगी।"
-                    )
-                }
-            }
-            lower.contains("शाबाश") || lower.contains("अच्छा") || lower.contains("सही") || lower.contains("धन्यवाद") -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱟᱹᱰᱤ ᱥᱟᱨᱦᱟᱣ! ᱟᱯᱮ ᱡᱚᱛᱚ ᱦᱚᱲ ᱥᱟᱹᱨᱤ ᱠᱟᱛᱷᱟ ᱯᱮ ᱞᱟᱹᱭ ᱠᱮᱫ-ᱟ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Adi sarhaw! Ape joto hor sari katha pe lay ked-a.",
-                        transliterationDevanagari = "आडी सारहाव! आपे जोतो होड़ सारी कथा पे लय केद-आ।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱟᱹᱰᱤ ᱵᱮᱥ! ᱟᱯᱮ ᱥᱚᱵᱮᱱ ᱠᱚ ᱥᱟᱹᱨᱤ ᱠᱟᱡᱤ ᱯᱮ ᱞᱟᱹᱭ ᱠᱮᱫ-ᱟ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Adi bes! Ape soben ko sari kaji pe lay ked-a.",
-                        transliterationDevanagari = "आडी बेस! आपे सोबेन को सारी काजी पे लय केद-आ।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "आडी बुगी! आपे सोबेन को सती कजी पे पढ़व केद-ए।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Adi bugi! Ape soben ko sati kaji pe padhaw ked-e.",
-                        transliterationDevanagari = "आडी बुगी! आपे सोबेन को सती कजी पे पढ़व केद-ए।"
-                    )
-                }
-            }
-            lower.contains("कविता") || lower.contains("गाना") || lower.contains("सीख") -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱛᱮᱦᱮᱧ ᱫᱚ ᱟᱵᱚ ᱢᱤᱫᱴᱟᱝ ᱱᱟᱣᱟ ᱥᱮᱨᱮᱧ ᱵᱚᱱ ᱪᱮᱫ-ᱟ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Teheny do abo mittang nawa serenj bon ched-a.",
-                        transliterationDevanagari = "तेहेञ दो आबो मिदटांग नावा सेरेञ बोन चेद-आ।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱛᱤᱥᱤᱝ ᱫᱚ ᱟᱵᱚ ᱢᱤᱭᱟᱹᱫᱽ ᱱᱟᱣᱟ ᱫᱩᱨᱟᱝ ᱵᱚᱱ ᱪᱮᱫ-ᱟ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Tising do abo miyad nawa durang bon ched-a.",
-                        transliterationDevanagari = "तिसिंग दो आबो मियाद नावा दुरांग बोन चेद-आ।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "तिसिंग दो आबु मियाद नावा दुरंग बु चेद-ए।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Tising do abu miyad nawa durang bu ched-e.",
-                        transliterationDevanagari = "तिसिंग दो आबु मियाद नावा दुरंग बु चेद-ए।"
-                    )
-                }
-            }
-            else -> {
-                when (lang) {
-                    TargetLanguage.SANTHALI -> VoiceTranslationResult(
-                        targetText = "ᱱᱚᱣᱟ ᱫᱚ ᱥᱟᱱᱛᱟᱲᱤ ᱛᱮ ᱟᱹᱰᱤ ᱱᱟᱯᱟᱭ ᱠᱟᱛᱷᱟ ᱠᱟᱱᱟ᱾",
-                        scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
-                        transliteration = "Nowa do Santhali te adi napay katha kana.",
-                        transliterationDevanagari = "नोवा दो संथाली ते आडी नापाय कथा काना।"
-                    )
-                    TargetLanguage.HO -> VoiceTranslationResult(
-                        targetText = "ᱱᱮᱱᱟ ᱫᱚ ᱦᱳ ᱡᱟᱜᱟᱨ ᱛᱮ ᱵᱮᱥ ᱠᱟᱡᱤ ᱛᱟᱱᱟ᱾",
-                        scriptText = "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)",
-                        transliteration = "Nena do Ho jagar te bes kaji tana.",
-                        transliterationDevanagari = "नेना दो हो जागार ते बेस काजी ताना।"
-                    )
-                    TargetLanguage.MUNDARI -> VoiceTranslationResult(
-                        targetText = "नेना दो मुण्डारी जगर ते बुगी कजी तन।",
-                        scriptText = "Devanagari Mundari (देवनागरी मुण्डारी)",
-                        transliteration = "Nena do Mundari jagar te bugi kaji tan.",
-                        transliterationDevanagari = "नेना दो मुण्डारी जगर ते बुगी कजी तन।"
-                    )
-                }
-            }
+        fun getOfflineQuickTranslationData(hindi: String, lang: TargetLanguage): VoiceTranslationResult {
+            val engineResult = OfflineVoiceTranslationEngine.translateTeacherToTribal(hindi, lang)
+            return VoiceTranslationResult(
+                targetText = engineResult.targetText,
+                scriptText = engineResult.scriptText,
+                transliteration = engineResult.transliteration,
+                transliterationDevanagari = engineResult.transliterationDevanagari
+            )
         }
     }
 }
+

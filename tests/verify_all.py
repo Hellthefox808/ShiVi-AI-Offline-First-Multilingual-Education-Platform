@@ -254,6 +254,112 @@ class TestBhashaSetuComprehensive(unittest.TestCase):
         self.assertIn("pipeline_timings", res)
         print(f"[PASS] Test 13: Master 7-stage synthesis pipeline verified ({res['pipeline_timings']['total_pipeline_ms']}ms latency).")
 
+    def test_14_two_way_voice_translation(self):
+        """Assert bidirectional voice translation (Teacher Hindi->Tribal and Student Tribal->Hindi) with SLA budget."""
+        # Teacher Mode: Hindi -> Santhali
+        teacher_res = self.client.post("/api/v1/voice/translate", json={
+            "hindi_transcript": "नमस्ते बच्चों! आज हम सब मिलकर पढ़ाई करेंगे।",
+            "target_language": "SANTHALI",
+            "speaker_role": "TEACHER",
+            "fln_mode": True,
+            "bilingual_relay": True
+        })
+        self.assertEqual(teacher_res.status_code, 200)
+        t_data = teacher_res.json()
+        self.assertEqual(t_data["speaker_role"], "TEACHER")
+        self.assertEqual(t_data["script_type"], "OL_CHIKI")
+        self.assertIn("ᱡᱚᱦᱟᱨ", t_data["translated_text"])
+        self.assertTrue(t_data["sla_compliant"])
+        self.assertEqual(t_data["speech_rate"], 0.72)
+
+        # Student Mode: Santhali Tribal -> Hindi
+        student_res = self.client.post("/api/v1/voice/two-way", json={
+            "transcript": "ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ!",
+            "target_language": "SANTHALI",
+            "speaker_role": "STUDENT"
+        })
+        self.assertEqual(student_res.status_code, 200)
+        s_data = student_res.json()
+        self.assertEqual(s_data["speaker_role"], "STUDENT")
+        self.assertIn("नमस्ते गुरुजी", s_data["translated_text"])
+        self.assertTrue(s_data["sla_compliant"])
+        print("[PASS] Test 14: Two-way voice translation (Teacher & Student) verified.")
+
+    def test_15_voice_ai_realtime_streaming_agent(self):
+        """Assert real-time Voice AI streaming session negotiation, WebSocket protocol, and barge-in interruption."""
+        import base64
+        from voice.streaming_agent import generate_pcm16_tone
+
+        # 1. Session Negotiation
+        sess_res = self.client.post("/api/v1/voice/session", json={
+            "target_language": "SANTHALI",
+            "speaker_role": "TEACHER",
+            "sample_rate": 24000,
+            "interrupt_enabled": True
+        })
+        self.assertEqual(sess_res.status_code, 200)
+        sess_data = sess_res.json()
+        self.assertTrue(sess_data["session_id"].startswith("sess_"))
+        self.assertTrue(sess_data["token"].startswith("vtok_"))
+        self.assertIn("websocket_url", sess_data)
+        self.assertEqual(sess_data["config"]["sample_rate"], 24000)
+
+        # 2. WebSocket Real-time Session & Streaming
+        with self.client.websocket_connect(f"/api/v1/voice/stream?session_id={sess_data['session_id']}") as ws:
+            # Receive session.created
+            created_event = ws.receive_json()
+            self.assertEqual(created_event["type"], "session.created")
+            self.assertEqual(created_event["session"]["id"], sess_data["session_id"])
+
+            # Send session.update
+            ws.send_json({
+                "type": "session.update",
+                "session": {
+                    "target_language": "HO",
+                    "speaker_role": "STUDENT"
+                }
+            })
+            updated_event = ws.receive_json()
+            self.assertEqual(updated_event["type"], "session.updated")
+            self.assertEqual(updated_event["session"]["target_language"], "HO")
+            self.assertEqual(updated_event["session"]["speaker_role"], "STUDENT")
+
+            # Ingest simulated PCM16 audio chunk
+            tone = generate_pcm16_tone(440.0, 0.1, sample_rate=24000, amplitude=0.3)
+            ws.send_json({
+                "type": "input_audio_buffer.append",
+                "audio": base64.b64encode(tone).decode("ascii")
+            })
+            # VAD detects speech started
+            vad_event = ws.receive_json()
+            self.assertEqual(vad_event["type"], "input_audio_buffer.speech_started")
+
+            # Commit turn and stream response
+            ws.send_json({
+                "type": "input_audio_buffer.commit",
+                "transcript": "ᱡᱚᱦᱟᱨ"
+            })
+            transcript_done = ws.receive_json()
+            self.assertEqual(transcript_done["type"], "response.audio_transcript.done")
+            self.assertIn("नमस्ते", transcript_done["translated_text"])
+
+            # Receive first audio delta
+            audio_delta = ws.receive_json()
+            self.assertEqual(audio_delta["type"], "response.audio.delta")
+            self.assertEqual(audio_delta["sample_rate"], 24000)
+
+            # Test barge-in cancellation
+            ws.send_json({"type": "response.cancel"})
+            events = []
+            for _ in range(6):
+                evt = ws.receive_json()
+                events.append(evt["type"])
+                if evt["type"] == "response.interrupted":
+                    break
+            self.assertIn("response.interrupted", events)
+
+        print("[PASS] Test 15: Real-time Voice AI streaming agent (WebSocket, VAD, Barge-in) verified.")
+
 if __name__ == "__main__":
     print("\n=======================================================")
     print("  BHASHASETU AI -- COMPREHENSIVE END-TO-END SUITE")

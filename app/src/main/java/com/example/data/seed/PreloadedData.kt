@@ -4,10 +4,15 @@ import com.example.data.local.CurriculumContentEntity
 import com.example.data.local.GlossaryEntity
 import com.example.data.local.LessonEntity
 import com.example.data.local.StudentEntity
+import com.example.data.local.WorksheetEntity
+import com.example.domain.model.ClassroomQuickPhrase
 import com.example.domain.model.GradeLevel
+import com.example.domain.model.StudentFlashcard
 import com.example.domain.model.SubjectArea
 import com.example.domain.model.TargetLanguage
 import com.example.domain.model.TraceItem
+import com.example.domain.model.WorksheetQuestion
+import com.example.domain.model.toJsonString
 
 object PreloadedData {
 
@@ -202,6 +207,207 @@ object PreloadedData {
             groundingScore = 0.95f,
             approvedAt = System.currentTimeMillis() - 3600000L,
             syncStatus = "SYNCED"
+        )
+    )
+
+    val defaultWorksheets = listOf(
+        WorksheetEntity(
+            id = "ws_1",
+            lessonId = "les_1",
+            title = "साल का वृक्ष व पर्यावरण कार्यपत्रक (Sarjom Dare Worksheet)",
+            grade = "Grade 2 (कक्षा 2)",
+            targetLanguage = "Santhali (ᱥᱟᱱᱛᱟᱲᱤ)",
+            instructions = "निर्देश: सभी प्रश्नों को ध्यान से पढ़ें और संथाली (Ol Chiki) व हिन्दी में उत्तर दें।",
+            questionsJson = listOf(
+                WorksheetQuestion(
+                    id = "ws_q_1_1",
+                    questionHindi = "साल के पेड़ को संथाली भाषा (Ol Chiki) में क्या कहा जाता है?",
+                    questionTarget = "ᱥᱟᱞ ᱫᱟᱨᱮ ᱥᱟᱱᱛᱟᱲᱤ ᱛᱮ ᱪᱮᱫ ᱠᱚ ᱢᱮᱛᱟᱜ-ᱟ?",
+                    type = "MCQ",
+                    options = listOf(
+                        "A. ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱮ (Sarjom Dare)",
+                        "B. ᱫᱟᱜ (Dah)",
+                        "C. ᱥᱤᱝ (Sing)",
+                        "D. ᱵᱤᱨ (Bir)"
+                    ),
+                    correctAnswer = "A. ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱮ (Sarjom Dare)",
+                    localContextHint = "सरहुल पर्व में साल के नए फूलों की पूजा की जाती है।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_1_2",
+                    questionHindi = "सही जोड़ी बनाएं: 'ᱫᱟᱜ' (Dah) का हिंदी अर्थ क्या है?",
+                    questionTarget = "ᱡᱚᱲ ᱵᱮᱱᱟᱣ ᱢᱮ: 'ᱫᱟᱜ' ᱨᱮᱱᱟᱜ ᱢᱮᱱᱮᱛ ᱪᱮᱫ ᱠᱟᱱᱟ?",
+                    type = "MATCH",
+                    options = listOf(
+                        "A. जल / पानी",
+                        "B. अग्नि / आग",
+                        "C. पवन / हवा",
+                        "D. जंगल / वन"
+                    ),
+                    correctAnswer = "A. जल / पानी",
+                    localContextHint = "गाँव के झरने और कुएं के स्वच्छ जल को संथाली में 'ᱫᱟᱜ' (Dah) कहते हैं।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_1_3",
+                    questionHindi = "सही या गलत: पेड़ हमें स्वच्छ हवा (ᱦᱚᱭ) और छाया (ᱩᱢᱩᱞ) देते हैं।",
+                    questionTarget = "ᱥᱟᱹᱨᱤ ᱥᱮ ᱮᱲᱮ: ᱫᱟᱨᱮ ᱫᱚ ᱟᱵᱚ ᱥᱟᱯᱷᱟ ᱦᱚᱭ ᱟᱨ ᱩᱢᱩᱞ ᱮᱢᱟ ᱵᱚᱱᱟ᱾",
+                    type = "TRUE_FALSE",
+                    options = listOf(
+                        "A. सही (ᱥᱟᱹᱨᱤ)",
+                        "B. गलत (ᱮᱲᱮ)"
+                    ),
+                    correctAnswer = "A. सही (ᱥᱟᱹᱨᱤ)",
+                    localContextHint = "पेड़ हमारे पर्यावरण की आत्मा हैं, इनकी रक्षा करना हमारा धर्म है।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_1_4",
+                    questionHindi = "मौखिक अभिव्यक्ति: संथाली में अभिवादन के लिए कौन सा शब्द बोला जाता है?",
+                    questionTarget = "ᱨᱚᱲ ᱟᱵᱷᱭᱟᱥ: ᱥᱟᱱᱛᱟᱲᱤ ᱛᱮ ᱡᱚᱦᱟᱨ (Greetings) ᱪᱮᱫ ᱠᱟᱱᱟ?",
+                    type = "ORAL_PRACTICE",
+                    options = listOf(
+                        "A. ᱡᱚᱦᱟᱨ (Johar)",
+                        "B. ᱫᱟᱠᱟ (Daka)",
+                        "C. ᱵᱤᱨ (Bir)",
+                        "D. ᱥᱟᱦᱟᱱ (Sahan)"
+                    ),
+                    correctAnswer = "A. ᱡᱚᱦᱟᱨ (Johar)",
+                    localContextHint = "कक्षा में शिक्षक और मित्रों को दोनों हाथ जोड़कर 'जोहार' कहें।"
+                )
+            ).toJsonString(),
+            isApproved = true,
+            createdAt = System.currentTimeMillis() - 86400000L
+        ),
+        WorksheetEntity(
+            id = "ws_2",
+            lessonId = "les_2",
+            title = "संख्या बोध व गिनती कार्यपत्रक (Ho Counting 1 to 5)",
+            grade = "Grade 1 (बालवाटिका / कक्षा 1)",
+            targetLanguage = "Ho (ᱦᱳ)",
+            instructions = "निर्देश: महुआ के बीज और पत्तों को गिनते हुए हो (Ho) भाषा में संख्याएं पहचानें।",
+            questionsJson = listOf(
+                WorksheetQuestion(
+                    id = "ws_q_2_1",
+                    questionHindi = "हो भाषा में संख्या '1' को क्या कहते हैं?",
+                    questionTarget = "ᱦᱳ ᱵᱷᱟᱥᱟ ᱛᱮ '᱑' ᱪᱮᱫ ᱠᱚ ᱢᱮᱛᱟᱜ-ᱟ?",
+                    type = "MCQ",
+                    options = listOf(
+                        "A. ᱢᱤᱭᱟᱹᱫᱽ (Miyad / मियाद)",
+                        "B. ᱵᱟᱨᱤᱭᱟ (Bariya / बरिया)",
+                        "C. ᱟᱹᱯᱤᱭᱟᱹ (Apiya / अपिया)",
+                        "D. ᱩᱯᱩᱱᱤᱭᱟᱹ (Upuniya / उपुनिया)"
+                    ),
+                    correctAnswer = "A. ᱢᱤᱭᱟᱹᱫᱽ (Miyad / मियाद)",
+                    localContextHint = "एक कलम या एक बीज के लिए 'मियाद' का प्रयोग करें।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_2_2",
+                    questionHindi = "हो भाषा में 'दो' (2) के लिए सही शब्द चुनें:",
+                    questionTarget = "ᱦᱳ ᱛᱮ '᱒' (Two) ᱨᱮᱱᱟᱜ ᱟᱹᱲᱟᱹ ᱪᱤᱱᱦᱟᱹᱣ ᱢᱮ:",
+                    type = "MATCH",
+                    options = listOf(
+                        "A. ᱵᱟᱨᱤᱭᱟ (Bariya)",
+                        "B. ᱢᱚᱬᱮᱭᱟ (Moneya)",
+                        "C. ᱛᱩᱨᱩᱭᱟ (Turuiya)",
+                        "D. ᱢᱤᱭᱟᱹᱫᱽ (Miyad)"
+                    ),
+                    correctAnswer = "A. ᱵᱟᱨᱤᱭᱟ (Bariya)",
+                    localContextHint = "हमारे पास दो आँखें (ᱵᱟᱨᱤᱭᱟ ᱢᱮᱫ) हैं।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_2_3",
+                    questionHindi = "सही या गलत: ᱢᱚᱬᱮᱭᱟ (Moneya) का अर्थ 'पाँच' (5) होता है।",
+                    questionTarget = "ᱥᱟᱹᱨᱤ ᱥᱮ ᱮᱲᱮ: ᱢᱚᱬᱮᱭᱟ (Moneya) ᱨᱮᱱᱟᱜ ᱢᱮᱱᱮᱛ ᱫᱚ ᱕ (Five) ᱠᱟᱱᱟ᱾",
+                    type = "TRUE_FALSE",
+                    options = listOf(
+                        "A. सही (ᱥᱟᱹᱨᱤ)",
+                        "B. गलत (ᱮᱲᱮ)"
+                    ),
+                    correctAnswer = "A. सही (ᱥᱟᱹᱨᱤ)",
+                    localContextHint = "एक हाथ में पाँच उंगलियाँ होती हैं - ᱢᱚᱬᱮᱭᱟ ᱜᱚᱴᱟᱝ ᱠᱟᱹᱴᱩᱵ᱾"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_2_4",
+                    questionHindi = "मौखिक गिनती अभ्यास: 1 से 3 तक हो भाषा में बोलें।",
+                    questionTarget = "ᱞᱮᱠᱷᱟ ᱟᱵᱷᱭᱟᱥ: ᱑ ᱠᱷᱚᱱ ᱓ ᱦᱟᱹᱵᱤᱡ ᱦᱳ ᱛᱮ ᱨᱚᱲ ᱢᱮ (Miyad, Bariya, Apiya)",
+                    type = "ORAL_PRACTICE",
+                    options = listOf(
+                        "A. Miyad (1), Bariya (2), Apiya (3)",
+                        "B. Upuniya (4), Moneya (5)",
+                        "C. Turuiya (6), Eya (7)",
+                        "D. Iral (8), Are (9)"
+                    ),
+                    correctAnswer = "A. Miyad (1), Bariya (2), Apiya (3)",
+                    localContextHint = "स्थानीय हाट में वस्तुएं गिनने में यह उपयोगी है।"
+                )
+            ).toJsonString(),
+            isApproved = true,
+            createdAt = System.currentTimeMillis() - 43200000L
+        ),
+        WorksheetEntity(
+            id = "ws_3",
+            lessonId = "les_3",
+            title = "जल, प्रकृति व गाँव कार्यपत्रक (Mundari Water & Nature)",
+            grade = "Grade 2 (कक्षा 2)",
+            targetLanguage = "Mundari (मुण्डारी)",
+            instructions = "निर्देश: मुण्डारी शब्दों को पहचानें और अपने गाँव के जल स्रोतों के बारे में बताएं।",
+            questionsJson = listOf(
+                WorksheetQuestion(
+                    id = "ws_q_3_1",
+                    questionHindi = "मुण्डारी भाषा में पानी (जल) को क्या कहते हैं?",
+                    questionTarget = "मुण्डारी ते 'पानी' चेद को मेतागा?",
+                    type = "MCQ",
+                    options = listOf(
+                        "A. दाः (Dah)",
+                        "B. दारू (Daru)",
+                        "C. बुरू (Buru)",
+                        "D. हातू (Hatu)"
+                    ),
+                    correctAnswer = "A. दाः (Dah)",
+                    localContextHint = "नदी, कुएं और बारिश के पानी को मुण्डारी में 'दाः' कहते हैं।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_3_2",
+                    questionHindi = "मुण्डारी शब्द 'हातू' (Hatu) का अर्थ क्या है?",
+                    questionTarget = "मुण्डारी शब्द 'हातू' (Hatu) राः मने चेद?",
+                    type = "MATCH",
+                    options = listOf(
+                        "A. गाँव (Village)",
+                        "B. पहाड़ (Mountain)",
+                        "C. नदी (River)",
+                        "D. खेत (Field)"
+                    ),
+                    correctAnswer = "A. गाँव (Village)",
+                    localContextHint = "खूंटी और रांची के मुण्डारी गाँवों को 'हातू' कहा जाता है।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_3_3",
+                    questionHindi = "सही या गलत: 'बुरू' (Buru) का अर्थ पहाड़ होता है।",
+                    questionTarget = "सारि या एड़े: मुण्डारी ते 'बुरू' (Buru) राः अर्थ पहाड़ तना।",
+                    type = "TRUE_FALSE",
+                    options = listOf(
+                        "A. सही (सारि / Sari)",
+                        "B. गलत (एड़े / Ede)"
+                    ),
+                    correctAnswer = "A. सही (सारि / Sari)",
+                    localContextHint = "मरांग बुरू झारखंड के प्रकृति पूजकों के सर्वोच्च पूज्य हैं।"
+                ),
+                WorksheetQuestion(
+                    id = "ws_q_3_4",
+                    questionHindi = "मौखिक अभ्यास: मुण्डारी में 'जोहार' कहकर अपनी कक्षा का स्वागत करें।",
+                    questionTarget = "काजी अभ्यास: मुण्डारी ते 'जोहार' मेन्ते स्वागत रीकाए पे।",
+                    type = "ORAL_PRACTICE",
+                    options = listOf(
+                        "A. जोहार! (Johar - स्वागत)",
+                        "B. सेनोः तनिं (Senoh taning - जा रहा हूँ)",
+                        "C. दाः (Dah - पानी)",
+                        "D. दारू (Daru - पेड़)"
+                    ),
+                    correctAnswer = "A. जोहार! (Johar - स्वागत)",
+                    localContextHint = "सभी सहपाठियों से मुस्कुराकर 'जोहार' कहें।"
+                )
+            ).toJsonString(),
+            isApproved = true,
+            createdAt = System.currentTimeMillis() - 21600000L
         )
     )
 
@@ -822,6 +1028,220 @@ export type LessonDto = z.infer<typeof LessonDtoSchema>;
         lastSyncTimestamp = System.currentTimeMillis() - 180000L,
         retryBackoffSeconds = 5,
         isNetworkAvailable = true
+    )
+
+    val defaultStudentFlashcards = listOf(
+        StudentFlashcard(
+            id = "fc_1",
+            category = "🐾 पशु-पक्षी (Animals)",
+            hindiWord = "गाय (गौमाता)",
+            santhaliWord = "ᱜᱟᱹᱭ (Gai)",
+            santhaliOlChiki = "ᱜᱟᱹᱭ",
+            hoWord = "ᱜᱟᱹᱭ (Gai)",
+            hoDevanagari = "गई",
+            mundariWord = "उरीः (Urih)",
+            devanagariPhonetic = "गई",
+            englishMeaning = "Cow",
+            iconEmoji = "🐄",
+            exampleSentenceHindi = "गाय हरी घास खाती है।",
+            exampleSentenceTribal = "ᱜᱟᱹᱭ ᱦᱟᱹᱨᱭᱟᱹᱲ ᱜᱷᱟᱸᱥ ᱮ ᱡᱚᱢ-ᱮᱫᱟ"
+        ),
+        StudentFlashcard(
+            id = "fc_2",
+            category = "🐾 पशु-पक्षी (Animals)",
+            hindiWord = "चिड़िया (पक्षी)",
+            santhaliWord = "ᱪᱮᱬᱮ (Chene)",
+            santhaliOlChiki = "ᱪᱮᱬᱮ",
+            hoWord = "ᱪᱮᱬᱮ (Chene)",
+            hoDevanagari = "चेणे",
+            mundariWord = "चेड़े (Chede)",
+            devanagariPhonetic = "चेणे",
+            englishMeaning = "Bird",
+            iconEmoji = "🐦",
+            exampleSentenceHindi = "चिड़िया पेड़ पर गाती है।",
+            exampleSentenceTribal = "ᱪᱮᱬᱮ ᱫᱟᱨᱮ ᱨᱮ ᱥᱮᱨᱮᱧ-ᱮᱫᱟᱭ"
+        ),
+        StudentFlashcard(
+            id = "fc_3",
+            category = "🔢 गिनती (Numbers)",
+            hindiWord = "एक (1)",
+            santhaliWord = "ᱢᱤᱫ (Mit' / Mid)",
+            santhaliOlChiki = "ᱢᱤᱫ",
+            hoWord = "ᱢᱤᱭᱟᱹᱫᱽ (Miyad)",
+            hoDevanagari = "मियद",
+            mundariWord = "मियाद (Miyad)",
+            devanagariPhonetic = "मिद",
+            englishMeaning = "One (1)",
+            iconEmoji = "1️⃣",
+            exampleSentenceHindi = "मेरे पास एक पेंसिल है।",
+            exampleSentenceTribal = "ᱤᱧ ᱴᱷᱮᱱ ᱢᱤᱫᱴᱟᱝ ᱯᱮᱱᱥᱤᱞ ᱢᱮᱱᱟᱜ-ᱟ"
+        ),
+        StudentFlashcard(
+            id = "fc_4",
+            category = "🔢 गिनती (Numbers)",
+            hindiWord = "दो (2)",
+            santhaliWord = "ᱵᱟᱨ (Bar / Barya)",
+            santhaliOlChiki = "ᱵᱟᱨ",
+            hoWord = "ᱵᱟᱹᱨᱭᱟᱹ (Bariya)",
+            hoDevanagari = "बरिया",
+            mundariWord = "बारिया (Bariya)",
+            devanagariPhonetic = "बार",
+            englishMeaning = "Two (2)",
+            iconEmoji = "2️⃣",
+            exampleSentenceHindi = "पेड़ पर दो फल लगे हैं।",
+            exampleSentenceTribal = "ᱫᱟᱨᱮ ᱨᱮ ᱵᱟᱨᱭᱟ ᱡᱚ ᱢᱮᱱᱟᱜ-ᱟ"
+        ),
+        StudentFlashcard(
+            id = "fc_5",
+            category = "🌳 प्रकृति व जंगल (Nature)",
+            hindiWord = "पेड़ (वृक्ष)",
+            santhaliWord = "ᱫᱟᱨᱮ (Dare)",
+            santhaliOlChiki = "ᱫᱟᱨᱮ",
+            hoWord = "ᱫᱟᱨᱩ (Daru)",
+            hoDevanagari = "दारू",
+            mundariWord = "दारू (Daru)",
+            devanagariPhonetic = "दारे",
+            englishMeaning = "Tree",
+            iconEmoji = "🌳",
+            exampleSentenceHindi = "यह साल का पवित्र पेड़ है।",
+            exampleSentenceTribal = "ᱱᱚᱣᱟ ᱫᱚ ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱮ ᱠᱟᱱᱟ"
+        ),
+        StudentFlashcard(
+            id = "fc_6",
+            category = "🌳 प्रकृति व जंगल (Nature)",
+            hindiWord = "जल (पानी)",
+            santhaliWord = "ᱫᱟᱜ (Dak')",
+            santhaliOlChiki = "ᱫᱟᱜ",
+            hoWord = "ᱫᱟᱜ (Dak')",
+            hoDevanagari = "दाग",
+            mundariWord = "दाः (Dah)",
+            devanagariPhonetic = "दाग",
+            englishMeaning = "Water",
+            iconEmoji = "💧",
+            exampleSentenceHindi = "साफ़ पानी पीना चाहिए।",
+            exampleSentenceTribal = "ᱯᱷᱟᱨᱪᱟ ᱫᱟᱜ ᱧᱩ ᱫᱚᱨᱠᱟᱨ"
+        ),
+        StudentFlashcard(
+            id = "fc_7",
+            category = "🏫 शाला व मित्र (School & Life)",
+            hindiWord = "किताब (पुस्तक)",
+            santhaliWord = "ᱯᱩᱛᱷᱤ (Puthi)",
+            santhaliOlChiki = "ᱯᱩᱛᱷᱤ",
+            hoWord = "ᱯᱚᱛᱚᱵ (Potob)",
+            hoDevanagari = "पोतोब",
+            mundariWord = "पुथी (Puthi)",
+            devanagariPhonetic = "पुथी",
+            englishMeaning = "Book",
+            iconEmoji = "📚",
+            exampleSentenceHindi = "हम सब मिलकर किताब पढ़ेंगे।",
+            exampleSentenceTribal = "ᱟᱵᱚ ᱡᱚᱛᱚ ᱦᱚᱲ ᱯᱩᱛᱷᱤ ᱵᱚᱱ ᱯᱟᱲᱦᱟᱣ-ᱟ"
+        ),
+        StudentFlashcard(
+            id = "fc_8",
+            category = "🏫 शाला व मित्र (School & Life)",
+            hindiWord = "दोस्त (मित्र)",
+            santhaliWord = "ᱜᱟᱛᱮ (Gate)",
+            santhaliOlChiki = "ᱜᱟᱛᱮ",
+            hoWord = "ᱡᱩᱲᱤ (Juri)",
+            hoDevanagari = "जुड़ी",
+            mundariWord = "संगाती (Sangati)",
+            devanagariPhonetic = "गाते",
+            englishMeaning = "Friend",
+            iconEmoji = "🤝",
+            exampleSentenceHindi = "हम सब अच्छे मित्र हैं।",
+            exampleSentenceTribal = "ᱟᱵᱚ ᱡᱚᱛᱚ ᱵᱷᱟᱹᱜᱤ ᱜᱟᱛᱮ ᱠᱟᱱᱟ ᱵᱚᱱ"
+        )
+    )
+
+    val defaultClassroomQuickPhrases = listOf(
+        ClassroomQuickPhrase(
+            id = "cqp_1",
+            hindiText = "बच्चों, सब अपनी जगह पर बैठ जाओ",
+            santhaliOlChiki = "ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ, ᱡᱚᱛᱚ ᱦᱚᱲ ᱫᱩᱲᱩᱵ ᱯᱮ",
+            santhaliPhonetic = "गिदरा को, जोतो होड़ दुड़ुब पे",
+            hoText = "ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ, ᱡᱚᱛᱚ ᱠᱚ ᱫᱩᱵ ᱯᱮ",
+            hoPhonetic = "गिदरा को, जोतो को दुब पे",
+            mundariText = "गिदरा को, जोतो को दुब पे",
+            category = "INSTRUCTION",
+            iconEmoji = "🪑"
+        ),
+        ClassroomQuickPhrase(
+            id = "cqp_2",
+            hindiText = "अपनी-अपनी किताबें और स्लेट खोलो",
+            santhaliOlChiki = "ᱟᱯᱮᱭᱟᱜ ᱯᱚᱛᱚᱵ ᱟᱨ ᱥᱞᱮᱴ ᱠᱷᱩᱞᱟᱹᱣ ᱯᱮ",
+            santhaliPhonetic = "आपेयाग पोतोब आर स्लेट खुलाउ पे",
+            hoText = "ᱟᱯᱮᱭᱟᱜ ᱯᱚᱛᱚᱵ ᱟᱨ ᱥᱞᱮᱴ ᱩᱛᱷᱟᱹᱣ ᱯᱮ",
+            hoPhonetic = "आपेयाग पोतोब आर स्लेट उथाउ पे",
+            mundariText = "आपेयाग पुथी आर स्लेट खुलाउ पे",
+            category = "INSTRUCTION",
+            iconEmoji = "📖"
+        ),
+        ClassroomQuickPhrase(
+            id = "cqp_3",
+            hindiText = "भोजन से पहले साबुन से हाथ धो लो",
+            santhaliOlChiki = "ᱡᱚᱢ ᱞᱟᱦᱟ ᱨᱮ ᱥᱟᱵᱚᱱ ᱛᱮ ᱛᱤ ᱟᱹᱨᱩᱵ ᱯᱮ",
+            santhaliPhonetic = "जोम लाहा रे साबोन ते ती आरुब पे",
+            hoText = "ᱡᱚᱢ ᱢᱟᱲᱟᱝ ᱨᱮ ᱥᱟᱵᱚᱱ ᱛᱮ ᱛᱤ ᱟᱹᱨᱩᱵ ᱯᱮ",
+            hoPhonetic = "जोम माड़ांग रे साबोन ते ती आरुब पे",
+            mundariText = "मांडी जोम सिदा रे साबुन ते ती आरुब पे",
+            category = "HYGIENE",
+            iconEmoji = "🧼"
+        ),
+        ClassroomQuickPhrase(
+            id = "cqp_4",
+            hindiText = "शाबाश! बहुत ही सुंदर काम किया",
+            santhaliOlChiki = "ᱟᱹᱰᱤ ᱱᱟᱯᱟᱭ! ᱟᱹᱰᱤ ᱵᱷᱟᱹᱜᱤ ᱠᱟᱹᱢᱤ ᱠᱮᱫᱟ ᱯᱮ",
+            santhaliPhonetic = "आडी नापाय! आडी भागी कामी केदा पे",
+            hoText = "ᱵᱮᱥ ᱜᱮ! ᱟᱹᱰᱤ ᱵᱩᱜᱤᱱ ᱠᱟᱹᱢᱤ ᱠᱮᱫᱟ ᱯᱮ",
+            hoPhonetic = "बेस गे! आडी बुगिन कामी केदा पे",
+            mundariText = "बुगिन गे! आडी बेस कामी केदा पे",
+            category = "PRAISE",
+            iconEmoji = "👏"
+        ),
+        ClassroomQuickPhrase(
+            id = "cqp_5",
+            hindiText = "सब मिलकर ध्यान से सुनो",
+            santhaliOlChiki = "ᱡᱚᱛᱚ ᱦᱚᱲ ᱢᱤᱫ ᱛᱮ ᱫᱷᱮᱭᱟᱱ ᱛᱮ ᱟᱧᱡᱚᱢ ᱯᱮ",
+            santhaliPhonetic = "जोतो होड़ मिद ते धेयान ते आंजोम पे",
+            hoText = "ᱡᱚᱛᱚ ᱠᱚ ᱢᱤᱫ ᱛᱮ ᱫᱷᱮᱭᱟᱱ ᱛᱮ ᱟᱧᱡᱚᱢ ᱯᱮ",
+            hoPhonetic = "जोतो को मिद ते धेयान ते आंजोम पे",
+            mundariText = "जोतो को मिद ते ध्यान ते आंजोम पे",
+            category = "INSTRUCTION",
+            iconEmoji = "👂"
+        ),
+        ClassroomQuickPhrase(
+            id = "cqp_6",
+            hindiText = "कल घर से गृहकार्य पूरा करके आना",
+            santhaliOlChiki = "ᱜᱟᱯᱟ ᱚᱲᱟᱜ ᱠᱷᱚᱱ ᱠᱟᱹᱢᱤ ᱯᱩᱨᱟᱹᱣ ᱠᱟᱛᱮ ᱦᱤᱡᱩᱜ ᱯᱮ",
+            santhaliPhonetic = "गापा ओड़ाग खोन कामी पुराव काते हिजुग पे",
+            hoText = "ᱜᱟᱯᱟ ᱚᱲᱟᱜ ᱮᱛᱮ ᱠᱟᱹᱢᱤ ᱠᱟᱛᱮ ᱦᱤᱡᱩᱜ ᱯᱮ",
+            hoPhonetic = "गापा ओड़ाग एते कामी काते हिजुग पे",
+            mundariText = "गापा ओड़ाः एते कामी पूरा केते हिजुग पे",
+            category = "ROUTINE",
+            iconEmoji = "🏠"
+        ),
+        ClassroomQuickPhrase(
+            id = "cqp_7",
+            hindiText = "कक्षा में शांति बनाए रखो",
+            santhaliOlChiki = "ᱠᱞᱟᱥ ᱨᱮ ᱛᱷᱤᱨ ᱛᱟᱦᱮᱸᱱ ᱯᱮ",
+            santhaliPhonetic = "क्लास रे थीर ताहेन पे",
+            hoText = "ᱠᱞᱟᱥ ᱨᱮ ᱛᱷᱤᱨ ᱛᱟᱭᱠᱮᱱ ᱯᱮ",
+            hoPhonetic = "क्लास रे थीर तायकेन पे",
+            mundariText = "क्लास रे थीर ताएन पे",
+            category = "INSTRUCTION",
+            iconEmoji = "🤫"
+        ),
+        ClassroomQuickPhrase(
+            id = "cqp_8",
+            hindiText = "जो बोलना चाहता है, हाथ उठाओ",
+            santhaliOlChiki = "ᱚᱠᱚᱭ ᱨᱚᱲ ᱥᱟᱱᱟᱭᱮ ᱠᱟᱱᱟ, ᱛᱤ ᱛᱩᱞ ᱯᱮ",
+            santhaliPhonetic = "ओकोय रोड़ सानाये काना, ती तुल पे",
+            hoText = "ᱡᱮ ᱠᱟᱡᱤ ᱥᱟᱱᱟᱭᱮ ᱛᱟᱱᱟ, ᱛᱤ ᱛᱩᱞ ᱯᱮ",
+            hoPhonetic = "जे काजी सानाये ताना, ती तुल पे",
+            mundariText = "अकोय काजी सानाई तना, ती तुल पे",
+            category = "INSTRUCTION",
+            iconEmoji = "✋"
+        )
     )
 }
 

@@ -30,6 +30,12 @@ class SpeechToTextManager(private val context: Context) {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
+    /**
+     * Optional listener invoked immediately when user begins speaking, allowing the audio
+     * subsystem to execute barge-in interruption and halt TTS playback.
+     */
+    var onSpeechStartedListener: (() -> Unit)? = null
+
     val isAvailable: Boolean
         get() = SpeechRecognizer.isRecognitionAvailable(context)
 
@@ -49,6 +55,7 @@ class SpeechToTextManager(private val context: Context) {
 
                     override fun onBeginningOfSpeech() {
                         _isListening.value = true
+                        onSpeechStartedListener?.invoke()
                     }
 
                     override fun onRmsChanged(rmsdB: Float) {

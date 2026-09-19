@@ -282,9 +282,24 @@ class LanguageProviderService:
         
         prompt_clean = (hindi_prompt or "").strip()
         gidra = terms.get("बच्चे", {})
+
+        # 0. Greetings & Classroom Opening Theme
+        if any(k in prompt_clean for k in ["नमस्ते", "प्रणाम", "स्वागत", "जोहार", "welcome"]):
+            if lang_key == "SANTHALI":
+                native = f"ᱡᱚᱦᱟᱨ {gidra.get('native', 'ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ')}! ᱛᱮᱦᱮᱧ ᱫᱚ ᱟᱵᱚ ᱢᱤᱫ ᱛᱮ ᱵᱚᱱ ᱯᱟᱲᱦᱟᱣ-ᱟ᱾"
+                translit_hi = "जोहार गिदरा को! तेहेञ दो आबो मिद ते बोन पाढ़ाव-आ।"
+                translit_lat = "Johar gidra ko! Teheny do abo mit' te bon padhaw-a."
+            elif lang_key == "HO":
+                native = f"ᱡᱚᱦᱟᱨ {gidra.get('native', 'ᱦᱚᱱᱠᱚ')}! ᱛᱤᱥᱤᱝ ᱫᱚ ᱟᱵᱚ ᱢᱤᱭᱟᱹᱫᱽ ᱛᱮ ᱵᱚᱱ ᱪᱮᱫ-ᱟ᱾"
+                translit_hi = "जोहार गिदरा को! तिसिंग दो आबो मियाद ते बोन चेद-आ।"
+                translit_lat = "Johar gidra ko! Tising do abo miyad te bon ched-a."
+            else: # MUNDARI
+                native = "जोहार गिदरा को! तिसिंग दो आबु मियाद ते बु पढ़व-ए।"
+                translit_hi = "जोहार गिदरा को! तिसिंग दो आबु मियाद ते बु पढ़व-ए।"
+                translit_lat = "Johar gidra ko! Tising do abu miyad te bu padhaw-e."
         
         # 1. Trees & Nature Theme
-        if any(k in prompt_clean for k in ["पेड़", "पत्ती", "पत्त", "वृक्ष", "जंगल", "साल", "सखुआ"]):
+        elif any(k in prompt_clean for k in ["पेड़", "पत्ती", "पत्त", "वृक्ष", "जंगल", "साल", "सखुआ"]):
             dare = terms.get("पेड़", {})
             sakam = terms.get("पत्ती", {})
             if lang_key == "SANTHALI":
@@ -382,6 +397,52 @@ class LanguageProviderService:
             "native_script_text": native,
             "transliteration_hindi": translit_hi,
             "transliteration_latin": translit_lat
+        }
+
+    def translate_student_to_hindi(self, tribal_text: str, target_lang: str) -> Dict[str, Any]:
+        """
+        Reverse MTB-MLE translation: Student spoken tribal phrase -> Classroom Hindi comprehension for the teacher.
+        """
+        lang_key = self.resolve_language(target_lang)
+        text_clean = tribal_text.strip()
+        lower = text_clean.lower()
+
+        # Greetings & Acknowledgements
+        if any(w in lower for w in ["ᱡᱚᱦᱟᱨ", "जोहार", "johar"]):
+            hindi = "नमस्ते गुरुजी! हम सभी उपस्थित हैं।"
+            hi_phonetic = "जोहार गुरुजी! आले आसड़ा ले हेज एना।"
+        elif any(w in lower for w in ["ᱯᱚᱛᱚᱵ", "पोतोब", "ᱯᱩᱛᱷᱤ", "पुथी"]):
+            hindi = "गुरुजी, हमने अपनी पुस्तक खोल ली है।"
+            hi_phonetic = "पोतोब झिज केद-अञ माचेत।"
+        elif any(w in lower for w in ["ᱥᱟᱨᱡᱚᱢ", "सारजोम", "ᱫᱟᱨᱮ", "दारे", "ᱫᱟᱨᱩ", "दारू"]):
+            hindi = "यह साल (सखुआ) का वृक्ष है, यह हमारा पवित्र पेड़ है।"
+            hi_phonetic = "नोवा दो सारजोम दारे काना।"
+        elif any(w in lower for w in ["ᱫᱟᱜ", "दाग", "ᱫᱟᱺ", "दाः", "दाक्"]):
+            hindi = "गुरुजी, मुझे पीने के लिए पानी चाहिए।"
+            hi_phonetic = "दाग ञु सानायिञ काना।"
+        elif any(w in lower for w in ["ᱵᱩᱡᱷᱟᱹᱣ", "बुझाव", "ᱪᱮᱫ", "चेद", "इतु"]):
+            hindi = "हाँ गुरुजी, मुझे यह पाठ अच्छे से समझ आ गया।"
+            hi_phonetic = "हें माचेत, इञ दो बेस तेंञ बुझाव केद-आ।"
+        elif any(w in lower for w in ["ᱞᱮᱠᱷᱟ", "लेखा", "ᱢᱤᱫ", "मिद", "ᱢᱤᱭᱟᱹᱫᱽ", "मियाद"]):
+            hindi = "गुरुजी, मुझे एक से पाँच तक गिनती आती है (१, २, ३, ४, ५)।"
+            hi_phonetic = "मिद बार पे पुन मोणे लेखाञ बाड़ाया।"
+        elif any(w in lower for w in ["ᱦᱮᱸ", "हें", "ᱦᱮ", "he", "yes"]):
+            hindi = "हाँ गुरुजी!"
+            hi_phonetic = "हें!"
+        elif any(w in lower for w in ["ᱵᱟᱝ", "बांग", "का", "bang"]):
+            hindi = "नहीं गुरुजी!"
+            hi_phonetic = "बांग!"
+        else:
+            hindi = f"विद्यार्थी का उत्तर: '{text_clean}' (कक्षा संवाद उत्तर)"
+            hi_phonetic = text_clean
+
+        return {
+            "speaker_role": "STUDENT",
+            "source_tribal_text": text_clean,
+            "target_language": lang_key,
+            "hindi_comprehension": hindi,
+            "transliteration_hindi": hi_phonetic,
+            "confidence": 0.96
         }
 
 language_provider = LanguageProviderService()

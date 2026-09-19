@@ -1,5 +1,8 @@
 package com.example.domain.model
 
+import org.json.JSONArray
+import org.json.JSONObject
+
 enum class TargetLanguage(
     val code: String,
     val displayName: String,
@@ -66,7 +69,114 @@ data class WorksheetQuestion(
     val options: List<String> = emptyList(),
     val correctAnswer: String,
     val localContextHint: String
-)
+) {
+    fun toJson(): String {
+        fun escape(s: String): String {
+            return buildString {
+                for (ch in s) {
+                    when (ch) {
+                        '\\' -> append("\\\\")
+                        '\"' -> append("\\\"")
+                        '\b' -> append("\\b")
+                        '\u000C' -> append("\\f")
+                        '\n' -> append("\\n")
+                        '\r' -> append("\\r")
+                        '\t' -> append("\\t")
+                        else -> append(ch)
+                    }
+                }
+            }
+        }
+        val optsJson = options.joinToString(prefix = "[", postfix = "]") { "\"${escape(it)}\"" }
+        return """{"id":"${escape(id)}","questionHindi":"${escape(questionHindi)}","questionTarget":"${escape(questionTarget)}","type":"${escape(type)}","options":$optsJson,"correctAnswer":"${escape(correctAnswer)}","localContextHint":"${escape(localContextHint)}"}"""
+    }
+}
+
+fun List<WorksheetQuestion>.toJsonString(): String =
+    joinToString(prefix = "[\n", postfix = "\n]", separator = ",\n") { it.toJson() }
+
+fun parseWorksheetQuestionsJson(jsonString: String): List<WorksheetQuestion> {
+    if (jsonString.isBlank()) return emptyList()
+    try {
+        val arr = JSONArray(jsonString)
+        val list = mutableListOf<WorksheetQuestion>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val optArr = obj.optJSONArray("options")
+            val optionsList = mutableListOf<String>()
+            if (optArr != null) {
+                for (j in 0 until optArr.length()) {
+                    optionsList.add(optArr.getString(j))
+                }
+            }
+            list.add(
+                WorksheetQuestion(
+                    id = obj.optString("id", "q_${i + 1}"),
+                    questionHindi = obj.optString("questionHindi", ""),
+                    questionTarget = obj.optString("questionTarget", ""),
+                    type = obj.optString("type", "MCQ"),
+                    options = optionsList,
+                    correctAnswer = obj.optString("correctAnswer", ""),
+                    localContextHint = obj.optString("localContextHint", "")
+                )
+            )
+        }
+        if (list.isNotEmpty()) return list
+    } catch (t: Throwable) {
+        // Fallback for environments where org.json is stubbed or fails
+    }
+
+    return parseWorksheetQuestionsFallback(jsonString)
+}
+
+fun parseWorksheetQuestionsFallback(json: String): List<WorksheetQuestion> {
+    val results = mutableListOf<WorksheetQuestion>()
+    val objRegex = Regex("""\{([^{}]+)\}""")
+    fun extractField(body: String, name: String): String {
+        val fieldRegex = Regex(""""$name"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"""")
+        val match = fieldRegex.find(body) ?: return ""
+        return match.groupValues[1]
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\")
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+    }
+    fun extractOptions(body: String): List<String> {
+        val optRegex = Regex(""""options"\s*:\s*\[(.*?)\]""", RegexOption.DOT_MATCHES_ALL)
+        val match = optRegex.find(body) ?: return emptyList()
+        val inside = match.groupValues[1]
+        val itemRegex = Regex(""""([^"\\]*(?:\\.[^"\\]*)*)"""")
+        return itemRegex.findAll(inside).map {
+            it.groupValues[1].replace("\\\"", "\"").replace("\\\\", "\\")
+        }.toList()
+    }
+
+    for (match in objRegex.findAll(json)) {
+        val body = match.groupValues[1]
+        val id = extractField(body, "id")
+        val qHindi = extractField(body, "questionHindi")
+        val qTarget = extractField(body, "questionTarget")
+        val type = extractField(body, "type").ifBlank { "MCQ" }
+        val options = extractOptions(body)
+        val answer = extractField(body, "correctAnswer")
+        val hint = extractField(body, "localContextHint")
+        if (qHindi.isNotBlank() || qTarget.isNotBlank()) {
+            results.add(
+                WorksheetQuestion(
+                    id = id.ifBlank { "q_${results.size + 1}" },
+                    questionHindi = qHindi,
+                    questionTarget = qTarget,
+                    type = type,
+                    options = options,
+                    correctAnswer = answer,
+                    localContextHint = hint
+                )
+            )
+        }
+    }
+    return results
+}
 
 data class CurriculumFilterParams(
     val query: String = "",
@@ -86,14 +196,22 @@ data class Flashcard(
     val imageUrl: String? = null
 )
 
+enum class VoiceSpeakerRole(val displayName: String, val iconEmoji: String) {
+    TEACHER("शिक्षक (Teacher: Hindi → Tribal)", "👨‍🏫"),
+    STUDENT("विद्यार्थी (Student: Tribal → Hindi)", "🧒")
+}
+
 data class VoiceTurn(
     val id: String,
-    val isTeacher: Boolean,
+    val isTeacher: Boolean = true,
+    val speakerRole: VoiceSpeakerRole = if (isTeacher) VoiceSpeakerRole.TEACHER else VoiceSpeakerRole.STUDENT,
     val hindiText: String,
     val targetText: String,
     val scriptText: String,
     val transliteration: String,
     val transliterationDevanagari: String = "",
+    val phoneticSyllables: List<String> = emptyList(),
+    val isFavorite: Boolean = false,
     val latencyMs: Long,
     val timestamp: Long = System.currentTimeMillis()
 )
@@ -103,7 +221,10 @@ data class VoiceSettings(
     val pitch: Float = 1.0f,
     val isBilingualRelayEnabled: Boolean = false,
     val isSlowClassroomMode: Boolean = false,
-    val autoPlayOnTranslate: Boolean = true
+    val autoPlayOnTranslate: Boolean = true,
+    val isTwoWayDialogueMode: Boolean = false,
+    val activeSpeakerRole: VoiceSpeakerRole = VoiceSpeakerRole.TEACHER,
+    val enablePhoneticSyllables: Boolean = true
 )
 
 data class PracticeQuizQuestion(
@@ -314,5 +435,63 @@ data class OfflineTabletState(
     val lastSyncTimestamp: Long,
     val retryBackoffSeconds: Int,
     val isNetworkAvailable: Boolean
+)
+
+enum class AppUserMode(
+    val titleHindi: String,
+    val subtitleHindi: String,
+    val shortLabel: String,
+    val iconEmoji: String,
+    val colorHex: Long
+) {
+    TEACHER(
+        titleHindi = "शिक्षक मोड (Teacher)",
+        subtitleHindi = "पाठ निर्माण, लाइव अनुवाद, कार्यपत्रक व NIPUN FLN",
+        shortLabel = "शिक्षक",
+        iconEmoji = "👩‍🏫",
+        colorHex = 0xFF4A3428
+    ),
+    STUDENT(
+        titleHindi = "बाल संसार (Student)",
+        subtitleHindi = "चित्र पहेली, सचित्र शब्द कार्ड, खेल-खेल में सीखें",
+        shortLabel = "बाल संसार",
+        iconEmoji = "🎒",
+        colorHex = 0xFFD97706
+    ),
+    COMMUNITY(
+        titleHindi = "सांस्कृतिक मंच (Community)",
+        subtitleHindi = "जनजातीय लोककथाएं, शब्दकोश व सांस्कृतिक धरोहर",
+        shortLabel = "समुदाय",
+        iconEmoji = "🏡",
+        colorHex = 0xFF059669
+    )
+}
+
+data class StudentFlashcard(
+    val id: String,
+    val category: String,
+    val hindiWord: String,
+    val santhaliWord: String,
+    val santhaliOlChiki: String,
+    val hoWord: String,
+    val hoDevanagari: String,
+    val mundariWord: String,
+    val devanagariPhonetic: String,
+    val englishMeaning: String,
+    val iconEmoji: String,
+    val exampleSentenceHindi: String,
+    val exampleSentenceTribal: String
+)
+
+data class ClassroomQuickPhrase(
+    val id: String,
+    val hindiText: String,
+    val santhaliOlChiki: String,
+    val santhaliPhonetic: String,
+    val hoText: String,
+    val hoPhonetic: String,
+    val mundariText: String,
+    val category: String, // INSTRUCTION, PRAISE, HYGIENE, ROUTINE
+    val iconEmoji: String
 )
 
