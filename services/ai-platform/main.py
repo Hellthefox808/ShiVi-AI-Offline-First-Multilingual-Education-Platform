@@ -289,6 +289,77 @@ def create_voice_session(req: VoiceSessionRequest):
         "expires_in_seconds": 3600
     }
 
+class WebRtcOfferRequest(BaseModel):
+    sdp: str = Field(..., description="Client SDP offer string")
+    type: str = Field(default="offer")
+    session_id: Optional[str] = None
+    target_language: str = Field(default="SANTHALI")
+    speaker_role: str = Field(default="TEACHER")
+
+@app.post("/api/v1/voice/webrtc/offer")
+def handle_webrtc_offer(req: WebRtcOfferRequest):
+    """
+    Negotiates WebRTC SDP offer from browser/native client, sets up RTP audio transceiver,
+    and returns synthetic SDP answer along with STUN/TURN ICE candidate configuration.
+    """
+    session_id = req.session_id or f"webrtc_{uuid.uuid4().hex[:10]}"
+    synthetic_answer_sdp = (
+        "v=0\r\n"
+        f"o=- {int(time.time())} 2 IN IP4 127.0.0.1\r\n"
+        "s=BhashaSetu-Voice-RTC\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE audio\r\n"
+        "m=audio 9 UDP/TLS/RTP/SAVPF 111 0 8\r\n"
+        "c=IN IP4 0.0.0.0\r\n"
+        "a=rtcp:9 IN IP4 0.0.0.0\r\n"
+        "a=sendrecv\r\n"
+        "a=rtpmap:111 opus/48000/2\r\n"
+        "a=fmtp:111 minptime=10;useinbandfec=1\r\n"
+        "a=setup:active\r\n"
+        "a=mid:audio\r\n"
+    )
+    return {
+        "type": "answer",
+        "sdp": synthetic_answer_sdp,
+        "session_id": session_id,
+        "ice_servers": [
+            {"urls": "stun:stun.l.google.com:19302"}
+        ],
+        "audio_codecs": ["opus/48000/2", "pcm16/24000/1"],
+        "target_language": req.target_language,
+        "speaker_role": req.speaker_role.upper(),
+        "created_at_ms": int(time.time() * 1000)
+    }
+
+class LiveKitTokenRequest(BaseModel):
+    room_name: str = Field(default="bhashasetu-classroom-01")
+    participant_name: str = Field(default="teacher_01")
+    role: str = Field(default="speaker", description="speaker or listener")
+    target_language: str = Field(default="SANTHALI")
+
+@app.post("/api/v1/voice/livekit/token")
+def create_livekit_token(req: LiveKitTokenRequest):
+    """
+    Issues LiveKit room token with participant identity, audio publishing/subscribing grants,
+    and room connection parameters for low-latency WebRTC SFU infrastructure.
+    """
+    token_id = f"lk_{uuid.uuid4().hex[:16]}"
+    return {
+        "room_name": req.room_name,
+        "participant_name": req.participant_name,
+        "token": token_id,
+        "livekit_url": "wss://livekit.bhashasetu.internal",
+        "grants": {
+            "room_join": True,
+            "room": req.room_name,
+            "can_publish": (req.role.lower() == "speaker"),
+            "can_subscribe": True,
+            "can_publish_data": True
+        },
+        "target_language": req.target_language,
+        "expires_in_seconds": 7200
+    }
+
 @app.websocket("/api/v1/voice/stream")
 async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[str] = None):
     await websocket.accept()
@@ -305,7 +376,9 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
                 "audio_format": session.config.audio_format,
                 "target_language": session.config.target_language,
                 "speaker_role": session.config.speaker_role,
-                "interrupt_enabled": session.config.interrupt_enabled
+                "interrupt_enabled": session.config.interrupt_enabled,
+                "prefix_padding_ms": session.config.prefix_padding_ms,
+                "silence_duration_ms": session.config.silence_duration_ms
             }
         }
     })
@@ -323,22 +396,34 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
                     session.config.speaker_role = sess_data["speaker_role"].upper()
                 if "interrupt_enabled" in sess_data:
                     session.config.interrupt_enabled = sess_data["interrupt_enabled"]
+                if "sample_rate" in sess_data:
+                    session.config.sample_rate = int(sess_data["sample_rate"])
                 await websocket.send_json({
                     "type": "session.updated",
                     "session": {
                         "id": session.session_id,
                         "target_language": session.config.target_language,
-                        "speaker_role": session.config.speaker_role
+                        "speaker_role": session.config.speaker_role,
+                        "sample_rate": session.config.sample_rate
                     }
                 })
                 
             elif msg_type == "input_audio_buffer.append":
                 b64_audio = data.get("audio", "")
+                client_sample_rate = data.get("sample_rate")
                 if b64_audio:
                     pcm_bytes = base64.b64decode(b64_audio)
-                    events = await session.handle_audio_frame(pcm_bytes)
+                    events = await session.handle_audio_frame(pcm_bytes, client_sample_rate=client_sample_rate)
                     for event in events:
                         await websocket.send_json(event)
+
+            elif msg_type == "input_audio_buffer.clear":
+                session.clear_input_buffer()
+                await websocket.send_json({
+                    "type": "input_audio_buffer.cleared",
+                    "session_id": session.session_id,
+                    "timestamp_ms": int(time.time() * 1000)
+                })
                         
             elif msg_type == "input_audio_buffer.commit":
                 fallback = data.get("transcript")

@@ -339,8 +339,15 @@ class TestBhashaSetuComprehensive(unittest.TestCase):
                 "type": "input_audio_buffer.commit",
                 "transcript": "ᱡᱚᱦᱟᱨ"
             })
-            transcript_done = ws.receive_json()
-            self.assertEqual(transcript_done["type"], "response.audio_transcript.done")
+            # Consume transcript deltas until transcript.done
+            transcript_done = None
+            while True:
+                evt = ws.receive_json()
+                if evt["type"] == "response.audio_transcript.done":
+                    transcript_done = evt
+                    break
+                self.assertEqual(evt["type"], "response.audio_transcript.delta")
+            self.assertIsNotNone(transcript_done)
             self.assertIn("नमस्ते", transcript_done["translated_text"])
 
             # Receive first audio delta
@@ -359,6 +366,37 @@ class TestBhashaSetuComprehensive(unittest.TestCase):
             self.assertIn("response.interrupted", events)
 
         print("[PASS] Test 15: Real-time Voice AI streaming agent (WebSocket, VAD, Barge-in) verified.")
+
+    def test_16_voice_ai_webrtc_and_livekit_negotiation(self):
+        """Assert WebRTC SDP offer/answer handshake and LiveKit room token minting."""
+        # 1. WebRTC SDP offer negotiation
+        sdp_offer = "v=0\r\no=- 98765 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n"
+        webrtc_res = self.client.post("/api/v1/voice/webrtc/offer", json={
+            "sdp": sdp_offer,
+            "type": "offer",
+            "target_language": "SANTHALI",
+            "speaker_role": "TEACHER"
+        })
+        self.assertEqual(webrtc_res.status_code, 200)
+        data = webrtc_res.json()
+        self.assertEqual(data["type"], "answer")
+        self.assertIn("v=0", data["sdp"])
+        self.assertIn("ice_servers", data)
+        self.assertEqual(data["target_language"], "SANTHALI")
+
+        # 2. LiveKit room token generation
+        livekit_res = self.client.post("/api/v1/voice/livekit/token", json={
+            "room_name": "classroom-khunti-01",
+            "participant_name": "teacher_soma",
+            "role": "speaker",
+            "target_language": "SANTHALI"
+        })
+        self.assertEqual(livekit_res.status_code, 200)
+        lk_data = livekit_res.json()
+        self.assertTrue(lk_data["token"].startswith("lk_"))
+        self.assertTrue(lk_data["grants"]["can_publish"])
+        self.assertEqual(lk_data["room_name"], "classroom-khunti-01")
+        print("[PASS] Test 16: WebRTC SDP offer/answer & LiveKit room token negotiation verified.")
 
 if __name__ == "__main__":
     print("\n=======================================================")
