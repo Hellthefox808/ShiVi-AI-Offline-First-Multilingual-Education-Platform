@@ -216,9 +216,48 @@ data class VoiceTurn(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+enum class VoiceTimbre(
+    val displayNameHindi: String,
+    val descriptionHindi: String,
+    val defaultPitch: Float,
+    val defaultSpeed: Float,
+    val defaultRelayPauseMs: Long
+) {
+    CLEAR_EDUCATIONAL(
+        displayNameHindi = "स्पष्ट शैक्षिक (Standard)",
+        descriptionHindi = "कक्षा शिक्षण के लिए मानक स्पष्ट उच्चारण",
+        defaultPitch = 1.00f,
+        defaultSpeed = 0.92f,
+        defaultRelayPauseMs = 450L
+    ),
+    WARM_TEACHER(
+        displayNameHindi = "स्नेही शिक्षक (Warm)",
+        descriptionHindi = "छोटे बच्चों के लिए धैर्यपूर्ण और मधुर स्वर",
+        defaultPitch = 0.96f,
+        defaultSpeed = 0.88f,
+        defaultRelayPauseMs = 500L
+    ),
+    EXPRESSIVE_STORYTELLER(
+        displayNameHindi = "कथावाचक (Storyteller)",
+        descriptionHindi = "लोककथाओं और कहानियों के लिए समृद्ध हाव-भाव",
+        defaultPitch = 1.08f,
+        defaultSpeed = 0.82f,
+        defaultRelayPauseMs = 600L
+    ),
+    YOUNG_STUDENT(
+        displayNameHindi = "बाल सहपाठी (Student)",
+        descriptionHindi = "साथी विद्यार्थियों के साथ संवाद हेतु चंचल स्वर",
+        defaultPitch = 1.20f,
+        defaultSpeed = 0.95f,
+        defaultRelayPauseMs = 350L
+    )
+}
+
 data class VoiceSettings(
     val speechRate: Float = 0.92f,
     val pitch: Float = 1.0f,
+    val timbre: VoiceTimbre = VoiceTimbre.CLEAR_EDUCATIONAL,
+    val relayPauseMs: Long = 450L,
     val isBilingualRelayEnabled: Boolean = false,
     val isSlowClassroomMode: Boolean = false,
     val autoPlayOnTranslate: Boolean = true,

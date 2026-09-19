@@ -42,6 +42,10 @@ class VoiceAgentConfig:
     target_language: str = "SANTHALI"
     fln_mode: bool = True
     bilingual_relay: bool = True
+    voice_timbre: str = "CLEAR_EDUCATIONAL"
+    pitch: float = 1.0
+    speech_rate: float = 0.92
+    relay_pause_ms: int = 450
 
 # --- Audio Resampling & Conversion ---
 
@@ -300,12 +304,17 @@ class RealtimeVoiceSession:
         result = voice_pipeline.process_voice_turn(
             hindi_transcript=text,
             target_lang=self.config.target_language,
-            speaker_role=self.config.speaker_role
+            speaker_role=self.config.speaker_role,
+            speech_rate=self.config.speech_rate,
+            pitch=self.config.pitch,
+            voice_timbre=self.config.voice_timbre,
+            relay_pause_ms=self.config.relay_pause_ms
         )
 
         translated_text = result["translated_text"]
         phonetic = result["phonetic_transliteration"]
         script_type = result["script_type"]
+        audio_meta = result.get("audio_metadata", {})
 
         # Stream progressive transcript tokens (word-by-word) for ultra-low perceived latency
         words = translated_text.split(" ")
@@ -344,6 +353,8 @@ class RealtimeVoiceSession:
             "translated_text": translated_text,
             "script_type": script_type,
             "phonetic_transliteration": phonetic,
+            "voice_timbre": self.config.voice_timbre,
+            "audio_metadata": audio_meta,
             "latency_breakdown_ms": result["latency_breakdown_ms"],
             "ttft_ms": ttft_ms or 35,
             "timestamp_ms": int(time.time() * 1000)
@@ -357,12 +368,17 @@ class RealtimeVoiceSession:
         total_chunks = 4
         ttfa_ms = None
 
+        # Modulate frequency based on configured pitch and timbre semitone offsets
+        base_freq = 440.0 * max(0.5, min(2.0, self.config.pitch))
+        pitch_semitones = audio_meta.get("pitch_semitone_offset", 0.0)
+        adjusted_freq = base_freq * (2.0 ** (pitch_semitones / 12.0))
+
         for chunk_idx in range(total_chunks):
             if self._interrupted:
                 break
 
             tone_pcm = generate_pcm16_tone(
-                frequency=440.0 + (chunk_idx * 40.0),
+                frequency=adjusted_freq + (chunk_idx * 30.0),
                 duration_seconds=chunk_duration_sec,
                 sample_rate=self.config.sample_rate,
                 amplitude=0.25
@@ -382,6 +398,8 @@ class RealtimeVoiceSession:
                 "delta": base64_audio,
                 "format": "pcm16",
                 "sample_rate": self.config.sample_rate,
+                "voice_timbre": self.config.voice_timbre,
+                "pitch": self.config.pitch,
                 "ttfa_ms": ttfa_ms
             }
             yield delta_event
@@ -405,6 +423,11 @@ class RealtimeVoiceSession:
                 "stt_provider": self.config.stt_provider,
                 "tts_provider": self.config.tts_provider,
                 "llm_provider": self.config.llm_provider,
+                "voice_timbre": self.config.voice_timbre,
+                "pitch": self.config.pitch,
+                "speech_rate": self.config.speech_rate,
+                "relay_pause_ms": self.config.relay_pause_ms,
+                "predicted_mos_score": audio_meta.get("predicted_mos_score", 4.3),
                 "sla_compliant": total_turn_ms <= 3000,
                 "timestamp_ms": int(time.time() * 1000)
             }

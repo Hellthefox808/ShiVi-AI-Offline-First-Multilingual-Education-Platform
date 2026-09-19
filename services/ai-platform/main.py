@@ -52,6 +52,10 @@ class VoiceTranslateRequest(BaseModel):
     target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
     fln_mode: Optional[bool] = Field(default=True)
     bilingual_relay: Optional[bool] = Field(default=True)
+    voice_timbre: Optional[str] = Field(default="CLEAR_EDUCATIONAL", examples=["CLEAR_EDUCATIONAL", "WARM_TEACHER", "EXPRESSIVE_STORYTELLER", "YOUNG_STUDENT"])
+    pitch: Optional[float] = Field(default=1.0, examples=[1.0])
+    speech_rate: Optional[float] = Field(default=None, examples=[0.92])
+    relay_pause_ms: Optional[int] = Field(default=450, examples=[450])
     audio_base64: Optional[str] = Field(default=None)
 
 class QualityEvaluateRequest(BaseModel):
@@ -241,16 +245,29 @@ def live_voice_translate(req: VoiceTranslateRequest):
         or req.hindi_transcript 
         or ("बच्चों, अपनी किताब खोलो" if speaker_role == "TEACHER" else "ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ!")
     )
-    result = voice_pipeline.process_voice_turn(text, req.target_language, speaker_role=speaker_role)
+    rate = req.speech_rate if req.speech_rate is not None else (0.72 if req.fln_mode is not False else 1.0)
+    pause_ms = req.relay_pause_ms if req.relay_pause_ms is not None else 450
+    pitch_val = req.pitch if req.pitch is not None else 1.0
+    timbre_val = req.voice_timbre or "CLEAR_EDUCATIONAL"
+
+    result = voice_pipeline.process_voice_turn(
+        hindi_transcript=text,
+        target_lang=req.target_language,
+        speaker_role=speaker_role,
+        speech_rate=rate,
+        pitch=pitch_val,
+        voice_timbre=timbre_val,
+        relay_pause_ms=pause_ms
+    )
     
     # Enrich with bilingual relay and fln specs
     result["turn_id"] = f"VOICE-{uuid.uuid4().hex[:6].upper()}"
-    result["speech_rate"] = 0.72 if req.fln_mode is not False else 1.0
+    result["speech_rate"] = rate
     result["acoustic_engine"] = "hi-IN"
     result["bilingual_relay"] = {
         "enabled": req.bilingual_relay is not False and speaker_role == "TEACHER",
-        "source_audio_pause_ms": 450,
-        "relay_sequence": ["SOURCE_HINDI", "PAUSE_450MS", "TRIBAL_PHONETIC_HI_IN"] if speaker_role == "TEACHER" else ["TRIBAL_SOURCE", "PAUSE_450MS", "HINDI_COMPREHENSION"]
+        "source_audio_pause_ms": pause_ms,
+        "relay_sequence": ["SOURCE_HINDI", f"PAUSE_{pause_ms}MS", "TRIBAL_PHONETIC_HI_IN"] if speaker_role == "TEACHER" else ["TRIBAL_SOURCE", f"PAUSE_{pause_ms}MS", "HINDI_COMPREHENSION"]
     }
     result["comet_score"] = 0.94
     result["quality_status"] = "HIGH_CONFIDENCE"
@@ -263,6 +280,10 @@ class VoiceSessionRequest(BaseModel):
     interrupt_enabled: bool = Field(default=True, examples=[True])
     fln_mode: bool = Field(default=True, examples=[True])
     bilingual_relay: bool = Field(default=True, examples=[True])
+    voice_timbre: str = Field(default="CLEAR_EDUCATIONAL", examples=["CLEAR_EDUCATIONAL", "WARM_TEACHER", "EXPRESSIVE_STORYTELLER", "YOUNG_STUDENT"])
+    pitch: float = Field(default=1.0, examples=[1.0])
+    speech_rate: float = Field(default=0.92, examples=[0.92])
+    relay_pause_ms: int = Field(default=450, examples=[450])
 
 @app.post("/api/v1/voice/session")
 def create_voice_session(req: VoiceSessionRequest):
@@ -281,7 +302,11 @@ def create_voice_session(req: VoiceSessionRequest):
             "vad_threshold": 0.02,
             "interrupt_enabled": req.interrupt_enabled,
             "fln_mode": req.fln_mode,
-            "bilingual_relay": req.bilingual_relay
+            "bilingual_relay": req.bilingual_relay,
+            "voice_timbre": req.voice_timbre,
+            "pitch": req.pitch,
+            "speech_rate": req.speech_rate,
+            "relay_pause_ms": req.relay_pause_ms
         },
         "ice_servers": [
             {"urls": "stun:stun.l.google.com:19302"}
@@ -378,7 +403,11 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
                 "speaker_role": session.config.speaker_role,
                 "interrupt_enabled": session.config.interrupt_enabled,
                 "prefix_padding_ms": session.config.prefix_padding_ms,
-                "silence_duration_ms": session.config.silence_duration_ms
+                "silence_duration_ms": session.config.silence_duration_ms,
+                "voice_timbre": session.config.voice_timbre,
+                "pitch": session.config.pitch,
+                "speech_rate": session.config.speech_rate,
+                "relay_pause_ms": session.config.relay_pause_ms
             }
         }
     })
@@ -398,13 +427,25 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
                     session.config.interrupt_enabled = sess_data["interrupt_enabled"]
                 if "sample_rate" in sess_data:
                     session.config.sample_rate = int(sess_data["sample_rate"])
+                if "voice_timbre" in sess_data:
+                    session.config.voice_timbre = str(sess_data["voice_timbre"]).upper()
+                if "pitch" in sess_data:
+                    session.config.pitch = float(sess_data["pitch"])
+                if "speech_rate" in sess_data:
+                    session.config.speech_rate = float(sess_data["speech_rate"])
+                if "relay_pause_ms" in sess_data:
+                    session.config.relay_pause_ms = int(sess_data["relay_pause_ms"])
                 await websocket.send_json({
                     "type": "session.updated",
                     "session": {
                         "id": session.session_id,
                         "target_language": session.config.target_language,
                         "speaker_role": session.config.speaker_role,
-                        "sample_rate": session.config.sample_rate
+                        "sample_rate": session.config.sample_rate,
+                        "voice_timbre": session.config.voice_timbre,
+                        "pitch": session.config.pitch,
+                        "speech_rate": session.config.speech_rate,
+                        "relay_pause_ms": session.config.relay_pause_ms
                     }
                 })
                 

@@ -211,9 +211,13 @@ export class AiClientService {
     targetLanguage: TargetLanguage;
     flnMode?: boolean;
     bilingualRelay?: boolean;
+    voiceTimbre?: string;
+    pitch?: number;
+    speechRate?: number;
+    relayPauseMs?: number;
   }) {
     const hindi = payload.transcriptionHindi || 'नमस्ते बच्चों, आज हम प्रकृति के बारे में पढ़ेंगे।';
-    const cacheKey = `voice:${payload.targetLanguage}:${payload.flnMode ?? true}:${payload.bilingualRelay ?? true}:${hindi.trim().toLowerCase()}`;
+    const cacheKey = `voice:${payload.targetLanguage}:${payload.voiceTimbre ?? 'CLEAR_EDUCATIONAL'}:${payload.pitch ?? 1.0}:${payload.flnMode ?? true}:${payload.bilingualRelay ?? true}:${hindi.trim().toLowerCase()}`;
     const cached = this.getFromCache<any>(cacheKey);
     if (cached) {
       return cached;
@@ -236,6 +240,10 @@ export class AiClientService {
           target_language: payload.targetLanguage,
           fln_mode: payload.flnMode ?? true,
           bilingual_relay: payload.bilingualRelay ?? true,
+          voice_timbre: payload.voiceTimbre ?? 'CLEAR_EDUCATIONAL',
+          pitch: payload.pitch ?? 1.0,
+          speech_rate: payload.speechRate,
+          relay_pause_ms: payload.relayPauseMs ?? 450,
         }),
         signal: AbortSignal.timeout(3000),
       });
@@ -294,11 +302,19 @@ export class AiClientService {
       targetLanguage: TargetLanguage;
       flnMode?: boolean;
       bilingualRelay?: boolean;
+      voiceTimbre?: string;
+      pitch?: number;
+      speechRate?: number;
+      relayPauseMs?: number;
     },
     hindi: string
   ) {
     const isSanthali = payload.targetLanguage === 'SANTHALI';
     const isHo = payload.targetLanguage === 'HO';
+    const pauseMs = payload.relayPauseMs ?? 450;
+    const timbre = payload.voiceTimbre ?? 'CLEAR_EDUCATIONAL';
+    const pitch = payload.pitch ?? 1.0;
+    const speechRate = payload.speechRate ?? (payload.flnMode !== false ? 0.72 : 1.0);
 
     const tribalNative = isSanthali
       ? 'ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ, ᱛᱮᱦᱮᱧ ᱫᱚ ᱵᱚᱱ ᱯᱟᱲᱦᱟᱣᱜ-ᱟ'
@@ -327,11 +343,13 @@ export class AiClientService {
       transliteration_devanagari: transliterationDevanagari,
       transliteration_latin: transliterationLatin,
       acoustic_engine: 'hi-IN',
-      speech_rate: payload.flnMode !== false ? 0.72 : 1.0,
+      speech_rate: speechRate,
+      voice_timbre: timbre,
+      pitch: pitch,
       bilingual_relay: {
         enabled: payload.bilingualRelay !== false,
-        source_audio_pause_ms: 450,
-        relay_sequence: ['SOURCE_HINDI', 'PAUSE_450MS', 'TRIBAL_PHONETIC_HI_IN'],
+        source_audio_pause_ms: pauseMs,
+        relay_sequence: ['SOURCE_HINDI', `PAUSE_${pauseMs}MS`, 'TRIBAL_PHONETIC_HI_IN'],
       },
       comet_score: 0.94,
       quality_status: 'HIGH_CONFIDENCE',
@@ -345,6 +363,10 @@ export class AiClientService {
     interruptEnabled?: boolean;
     flnMode?: boolean;
     bilingualRelay?: boolean;
+    voiceTimbre?: string;
+    pitch?: number;
+    speechRate?: number;
+    relayPauseMs?: number;
   }) {
     const endpoint = this.getNextEndpoint();
     try {
@@ -358,6 +380,10 @@ export class AiClientService {
           interrupt_enabled: payload.interruptEnabled ?? true,
           fln_mode: payload.flnMode ?? true,
           bilingual_relay: payload.bilingualRelay ?? true,
+          voice_timbre: payload.voiceTimbre ?? 'CLEAR_EDUCATIONAL',
+          pitch: payload.pitch ?? 1.0,
+          speech_rate: payload.speechRate ?? 0.92,
+          relay_pause_ms: payload.relayPauseMs ?? 450,
         }),
         signal: AbortSignal.timeout(3000),
       });
@@ -385,6 +411,10 @@ export class AiClientService {
         interrupt_enabled: payload.interruptEnabled ?? true,
         fln_mode: payload.flnMode ?? true,
         bilingual_relay: payload.bilingualRelay ?? true,
+        voice_timbre: payload.voiceTimbre ?? 'CLEAR_EDUCATIONAL',
+        pitch: payload.pitch ?? 1.0,
+        speech_rate: payload.speechRate ?? 0.92,
+        relay_pause_ms: payload.relayPauseMs ?? 450,
       },
       ice_servers: [{ urls: 'stun:stun.l.google.com:19302' }],
       expires_in_seconds: 3600,
@@ -399,6 +429,10 @@ export class AiClientService {
     speakerRole?: string;
     flnMode?: boolean;
     bilingualRelay?: boolean;
+    voiceTimbre?: string;
+    pitch?: number;
+    speechRate?: number;
+    relayPauseMs?: number;
   }) {
     const speakerRole = (payload.speakerRole ?? 'TEACHER').toUpperCase();
     const endpoint = this.getNextEndpoint();
@@ -415,6 +449,10 @@ export class AiClientService {
           speaker_role: speakerRole,
           fln_mode: payload.flnMode ?? true,
           bilingual_relay: payload.bilingualRelay ?? true,
+          voice_timbre: payload.voiceTimbre ?? 'CLEAR_EDUCATIONAL',
+          pitch: payload.pitch ?? 1.0,
+          speech_rate: payload.speechRate,
+          relay_pause_ms: payload.relayPauseMs ?? 450,
         }),
         signal: AbortSignal.timeout(3000),
       });
@@ -432,6 +470,10 @@ export class AiClientService {
         targetLanguage: payload.targetLanguage,
         flnMode: payload.flnMode,
         bilingualRelay: payload.bilingualRelay,
+        voiceTimbre: payload.voiceTimbre,
+        pitch: payload.pitch,
+        speechRate: payload.speechRate,
+        relayPauseMs: payload.relayPauseMs,
       },
       payload.hindiTranscript ?? payload.transcript ?? 'कक्षा शिक्षण'
     );

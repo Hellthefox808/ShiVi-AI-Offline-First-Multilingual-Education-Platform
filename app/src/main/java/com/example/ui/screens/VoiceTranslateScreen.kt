@@ -37,6 +37,7 @@ import androidx.core.content.ContextCompat
 import com.example.domain.model.TargetLanguage
 import com.example.domain.model.VoiceSettings
 import com.example.domain.model.VoiceSpeakerRole
+import com.example.domain.model.VoiceTimbre
 import com.example.domain.model.VoiceTurn
 import com.example.ui.components.GlassmorphicCard
 import com.example.ui.components.LanguageSelectorChipRow
@@ -720,8 +721,10 @@ fun VoiceTranslateScreen(
             VoiceSettingsSheetContent(
                 settings = voiceSettings,
                 targetLanguage = selectedLanguage,
+                onTimbreChange = { viewModel.setVoiceTimbre(it) },
                 onRateChange = { viewModel.updateSpeechRate(it) },
                 onPitchChange = { viewModel.updatePitch(it) },
+                onRelayPauseChange = { viewModel.updateRelayPauseMs(it) },
                 onBilingualToggle = { viewModel.toggleBilingualRelay(it) },
                 onSlowModeToggle = { viewModel.toggleSlowClassroomMode(it) },
                 onAutoPlayToggle = { viewModel.toggleAutoPlayOnTranslate(it) },
@@ -734,7 +737,8 @@ fun VoiceTranslateScreen(
                     if (voiceSettings.isBilingualRelayEnabled) {
                         viewModel.ttsManager.speakBilingualRelay(
                             "नमस्ते बच्चों! आज हम सब मिलकर पढ़ाई करेंगे।",
-                            testDevanagari
+                            testDevanagari,
+                            pauseMs = voiceSettings.relayPauseMs
                         )
                     } else {
                         viewModel.ttsManager.speakTribalPhonetic(
@@ -754,8 +758,10 @@ fun VoiceTranslateScreen(
 fun VoiceSettingsSheetContent(
     settings: VoiceSettings,
     targetLanguage: TargetLanguage,
+    onTimbreChange: (VoiceTimbre) -> Unit,
     onRateChange: (Float) -> Unit,
     onPitchChange: (Float) -> Unit,
+    onRelayPauseChange: (Long) -> Unit,
     onBilingualToggle: (Boolean) -> Unit,
     onSlowModeToggle: (Boolean) -> Unit,
     onAutoPlayToggle: (Boolean) -> Unit,
@@ -795,7 +801,44 @@ fun VoiceSettingsSheetContent(
 
         HorizontalDivider()
 
-        // Speech Rate Slider
+        // 1. Voice Timbre Presets
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "ध्वनि स्वरूप प्रीसेट (Voice Timbre Preset):",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(VoiceTimbre.values()) { timbre ->
+                    val isSelected = (settings.timbre == timbre)
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onTimbreChange(timbre) },
+                        label = {
+                            Text(
+                                text = timbre.displayNameHindi,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        leadingIcon = if (isSelected) {
+                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                        } else null,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                }
+            }
+            Text(
+                text = settings.timbre.descriptionHindi,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        // 2. Speech Rate Slider
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -822,7 +865,7 @@ fun VoiceSettingsSheetContent(
             )
         }
 
-        // Pitch Slider
+        // 3. Pitch Slider
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -845,6 +888,33 @@ fun VoiceSettingsSheetContent(
                 onValueChange = onPitchChange,
                 valueRange = 0.8f..1.3f,
                 steps = 5,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // 4. Relay Pause Duration Slider
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "रिले ठहराव (Relay Pause):",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "${settings.relayPauseMs} ms",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Slider(
+                value = settings.relayPauseMs.toFloat(),
+                onValueChange = { onRelayPauseChange(it.toLong()) },
+                valueRange = 250f..750f,
+                steps = 9,
                 modifier = Modifier.fillMaxWidth()
             )
         }

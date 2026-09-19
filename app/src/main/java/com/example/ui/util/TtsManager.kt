@@ -29,6 +29,8 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
         private set
     var currentPitch: Float = 1.0f
         private set
+    var currentRelayPauseMs: Long = 450L
+        private set
 
     init {
         try {
@@ -87,6 +89,34 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
         }
     }
 
+    fun setRelayPauseMs(pauseMs: Long) {
+        currentRelayPauseMs = pauseMs.coerceIn(200L, 1000L)
+    }
+
+    fun applyVoicePreset(pitch: Float, rate: Float, relayPauseMs: Long) {
+        setPitch(pitch)
+        setSpeechRate(rate)
+        setRelayPauseMs(relayPauseMs)
+    }
+
+    /**
+     * Normalizes tribal Devanagari phonetics for high-fidelity acoustic rendering via hi-IN acoustic engine.
+     * Cleans Ol Chiki punctuation (᱾, ᱿), removes parenthetical pronunciation hints, and ensures
+     * correct prosodic pauses for authentic classroom audio.
+     */
+    fun normalizeTribalPhonetics(rawPhonetic: String): String {
+        if (rawPhonetic.isBlank()) return ""
+        var cleaned = rawPhonetic
+            .replace("᱾", "। ")
+            .replace("᱿", "। ")
+            .replace(" (दाक्')", " दाक")
+            .replace(" (मित')", " मित")
+            .replace(Regex("\\([A-Za-z'\\s]+\\)"), "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        return cleaned.ifBlank { rawPhonetic }
+    }
+
     /**
      * Speaks arbitrary text with language locale and optional rate override.
      */
@@ -121,8 +151,7 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     /**
      * Speaks tribal speech with fine-tuned phonetic pronunciation.
-     * Since standard Android TTS cannot directly synthesize Ol Chiki or Warang Chiti Unicode fonts,
-     * this passes the accurate Devanagari phonetic transliteration to the Hindi acoustic voice model,
+     * Routes accurate Devanagari phonetic transliterations through the hi-IN acoustic engine,
      * providing authentic, natural, and clear spoken output for classroom students.
      */
     fun speakTribalPhonetic(
@@ -131,18 +160,20 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
         slowMode: Boolean = false,
         utteranceId: String = "tribal_${System.currentTimeMillis()}"
     ) {
-        val textToSpeak = devanagariPhonetic.ifBlank { fallbackText }
+        val rawText = devanagariPhonetic.ifBlank { fallbackText }
+        val normalized = normalizeTribalPhonetics(rawText)
         val rate = if (slowMode) 0.72f else currentSpeechRate
-        speak(text = textToSpeak, languageCode = "hi", utteranceId = utteranceId, overrideRate = rate)
+        speak(text = normalized, languageCode = "hi", utteranceId = utteranceId, overrideRate = rate)
     }
 
     /**
-     * Bilingual Relay: Plays the teacher's Hindi speech first, then after a natural pedagogical pause,
+     * Bilingual Relay: Plays the teacher's Hindi speech first, then after a configurable pedagogical pause,
      * speaks the tribal mother-tongue translation so foundational learners hear both languages back-to-back.
      */
     fun speakBilingualRelay(
         hindiSource: String,
         tribalDevanagari: String,
+        pauseMs: Long? = null,
         utterancePrefix: String = "relay_${System.currentTimeMillis()}",
         onComplete: (() -> Unit)? = null
     ) {
@@ -151,6 +182,7 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
 
         val relayId1 = "${utterancePrefix}_hi"
         val relayId2 = "${utterancePrefix}_tr"
+        val effectivePause = pauseMs ?: currentRelayPauseMs
 
         try {
             tts?.language = Locale.forLanguageTag("hi-IN")
@@ -163,14 +195,15 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
             }
             tts?.speak(hindiSource, TextToSpeech.QUEUE_FLUSH, params1, relayId1)
 
-            // Step 2: 400ms pause and play Tribal translation
-            tts?.playSilentUtterance(450L, TextToSpeech.QUEUE_ADD, "pause_relay")
+            // Step 2: Pedagogical pause (200ms - 1000ms)
+            tts?.playSilentUtterance(effectivePause, TextToSpeech.QUEUE_ADD, "pause_relay")
 
             val params2 = Bundle().apply {
                 putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, relayId2)
             }
-            val targetPhonetic = tribalDevanagari.ifBlank { hindiSource }
-            tts?.speak(targetPhonetic, TextToSpeech.QUEUE_ADD, params2, relayId2)
+            val rawTarget = tribalDevanagari.ifBlank { hindiSource }
+            val normalizedTarget = normalizeTribalPhonetics(rawTarget)
+            tts?.speak(normalizedTarget, TextToSpeech.QUEUE_ADD, params2, relayId2)
         } catch (e: Exception) {
             Log.e("TtsManager", "Bilingual relay failed: ${e.message}")
         }

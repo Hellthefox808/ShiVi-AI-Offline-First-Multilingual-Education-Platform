@@ -16,6 +16,7 @@ Comprehensive testing across all subsystems:
 
 import sys
 import os
+import time
 import unittest
 
 if hasattr(sys.stdout, 'reconfigure'):
@@ -397,6 +398,46 @@ class TestBhashaSetuComprehensive(unittest.TestCase):
         self.assertTrue(lk_data["grants"]["can_publish"])
         self.assertEqual(lk_data["room_name"], "classroom-khunti-01")
         print("[PASS] Test 16: WebRTC SDP offer/answer & LiveKit room token negotiation verified.")
+
+    def test_17_voice_ai_fine_tuning_timbre_and_rtf_benchmarks(self):
+        """Assert Voice AI fine-tuning: 4 timbre presets, pitch modulation, formants, and RTF < 0.20."""
+        # 1. Verify 4 Timbre Profiles and MOS >= 4.2
+        for timbre_name, profile in voice_pipeline.TIMBRE_PROFILES.items():
+            self.assertIn(timbre_name, ["CLEAR_EDUCATIONAL", "WARM_TEACHER", "EXPRESSIVE_STORYTELLER", "YOUNG_STUDENT"])
+            self.assertGreaterEqual(profile["mos"], 4.2)
+
+        # 2. Verify Voice Translate API with Fine-Tuning Parameters
+        res = self.client.post("/api/v1/voice/translate", json={
+            "transcript": "बच्चों, अपनी किताब खोलो",
+            "target_language": "SANTHALI",
+            "speaker_role": "TEACHER",
+            "voice_timbre": "EXPRESSIVE_STORYTELLER",
+            "pitch": 1.1,
+            "speech_rate": 0.82,
+            "relay_pause_ms": 600
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["audio_metadata"]["voice_timbre"], "EXPRESSIVE_STORYTELLER")
+        self.assertEqual(data["audio_metadata"]["relay_pause_ms"], 600)
+        self.assertAlmostEqual(data["audio_metadata"]["pitch_multiplier"], 1.1)
+        self.assertGreater(data["audio_metadata"]["predicted_mos_score"], 4.2)
+        self.assertEqual(data["bilingual_relay"]["source_audio_pause_ms"], 600)
+
+        # 3. Real-Time Factor (RTF) Benchmark
+        start = time.perf_counter()
+        turn_res = voice_pipeline.process_voice_turn(
+            hindi_transcript="जल ही जीवन है और हमें पानी बचाना चाहिए।",
+            target_lang="SANTHALI",
+            voice_timbre="CLEAR_EDUCATIONAL",
+            speech_rate=0.92
+        )
+        elapsed_sec = time.perf_counter() - start
+        audio_dur_sec = turn_res["audio_metadata"]["duration_ms"] / 1000.0
+        rtf = elapsed_sec / audio_dur_sec
+        self.assertLess(rtf, 0.20, f"RTF {rtf:.4f} exceeded 0.20 threshold")
+
+        print(f"[PASS] Test 17: Voice AI fine-tuning (4 timbres, RTF={rtf:.4f} < 0.20, MOS={data['audio_metadata']['predicted_mos_score']}) verified.")
 
 if __name__ == "__main__":
     print("\n=======================================================")

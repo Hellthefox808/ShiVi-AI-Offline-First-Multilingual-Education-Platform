@@ -703,6 +703,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isVoiceSettingsOpen.value = open
     }
 
+    fun setVoiceTimbre(timbre: VoiceTimbre) {
+        voiceSettings.value = voiceSettings.value.copy(
+            timbre = timbre,
+            pitch = timbre.defaultPitch,
+            speechRate = timbre.defaultSpeed,
+            relayPauseMs = timbre.defaultRelayPauseMs
+        )
+        ttsManager.applyVoicePreset(
+            pitch = timbre.defaultPitch,
+            rate = timbre.defaultSpeed,
+            relayPauseMs = timbre.defaultRelayPauseMs
+        )
+    }
+
     fun updateSpeechRate(rate: Float) {
         voiceSettings.value = voiceSettings.value.copy(speechRate = rate)
         ttsManager.setSpeechRate(rate)
@@ -711,6 +725,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updatePitch(pitch: Float) {
         voiceSettings.value = voiceSettings.value.copy(pitch = pitch)
         ttsManager.setPitch(pitch)
+    }
+
+    fun updateRelayPauseMs(pauseMs: Long) {
+        voiceSettings.value = voiceSettings.value.copy(relayPauseMs = pauseMs)
+        ttsManager.setRelayPauseMs(pauseMs)
     }
 
     fun toggleBilingualRelay(enabled: Boolean) {
@@ -762,6 +781,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ttsManager.speakBilingualRelay(
             hindiSource = turn.hindiText,
             tribalDevanagari = phonetic,
+            pauseMs = voiceSettings.value.relayPauseMs,
             utterancePrefix = "relay_${turn.id}"
         )
     }
