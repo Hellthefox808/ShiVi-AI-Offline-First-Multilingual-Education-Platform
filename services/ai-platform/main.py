@@ -93,6 +93,36 @@ class BatchTranslateRequest(BaseModel):
     prompts: List[str] = Field(..., examples=[["नमस्ते", "पानी", "पेड़"]])
     target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
 
+class SingleTranslateRequest(BaseModel):
+    text: str = Field(..., examples=["बच्चों, आज हम स्थानीय पेड़ों के बारे में सीखेंगे।"])
+    target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
+    source_language: Optional[str] = Field(default="HINDI", examples=["HINDI"])
+    speaker_role: Optional[str] = Field(default="TEACHER", examples=["TEACHER", "STUDENT"])
+    fln_mode: Optional[bool] = Field(default=True)
+    include_alignment: Optional[bool] = Field(default=False)
+
+class TransliterateRequest(BaseModel):
+    text: str = Field(..., examples=["ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ!"])
+    source_script: str = Field(default="OL_CHIKI", examples=["OL_CHIKI", "DEVANAGARI", "LATIN"])
+    target_script: str = Field(default="DEVANAGARI", examples=["DEVANAGARI", "OL_CHIKI", "LATIN"])
+    language: Optional[str] = Field(default="SANTHALI", examples=["SANTHALI"])
+
+class DetectLanguageRequest(BaseModel):
+    text: str = Field(..., examples=["ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ!"])
+
+class AlignTokensRequest(BaseModel):
+    text: str = Field(..., examples=["बच्चों, आज हम पेड़ों के बारे में सीखेंगे।"])
+    target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
+
+class BackTranslateRequest(BaseModel):
+    text: str = Field(..., examples=["बच्चों, अपनी किताब खोलो"])
+    target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
+
+class DialectAdaptRequest(BaseModel):
+    text: str = Field(..., examples=["ᱡᱚᱦᱟᱨ ᱜᱮ, ᱪᱮᱛ ᱞᱮᱠᱟ ᱢᱮᱱᱟᱜ ᱵᱤᱱᱟ?"])
+    target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
+    dialect_region: str = Field(default="SANTHAL_PARGANA", examples=["SANTHAL_PARGANA", "KOLHAN", "CHOTA_NAGPUR", "MAYURBHANJ"])
+
 # --- API Endpoints ---
 @app.get("/health")
 def health_check():
@@ -115,6 +145,59 @@ def health_check():
 @app.get("/api/v1/languages/capabilities")
 def get_language_capabilities():
     return language_provider.get_capabilities()
+
+@app.post("/api/v1/translate")
+@app.post("/api/v1/ai/translate")
+def translate_single(req: SingleTranslateRequest):
+    return language_provider.translate_text(
+        text=req.text,
+        target_language=req.target_language,
+        source_language=req.source_language or "HINDI",
+        speaker_role=req.speaker_role or "TEACHER",
+        fln_mode=req.fln_mode if req.fln_mode is not None else True,
+        include_alignment=req.include_alignment or False
+    )
+
+@app.get("/api/v1/translate/glossary")
+def get_translation_glossary(category: Optional[str] = None, language: Optional[str] = None):
+    return language_provider.get_glossary(category=category, language=language)
+
+@app.get("/api/v1/translate/glossary/search")
+def search_translation_glossary(q: str, language: Optional[str] = None):
+    return language_provider.search_glossary(query=q, language=language)
+
+@app.get("/api/v1/translate/glossary/categories")
+def get_translation_glossary_categories():
+    return language_provider.get_glossary_categories()
+
+@app.post("/api/v1/translate/transliterate")
+def transliterate_text(req: TransliterateRequest):
+    return language_provider.transliterate_script(
+        text=req.text,
+        source_script=req.source_script,
+        target_script=req.target_script,
+        language=req.language or "SANTHALI"
+    )
+
+@app.post("/api/v1/translate/detect")
+def detect_text_language(req: DetectLanguageRequest):
+    return language_provider.detect_language_and_script(text=req.text)
+
+@app.post("/api/v1/translate/align")
+def align_text_tokens(req: AlignTokensRequest):
+    return language_provider.align_tokens(text=req.text, target_language=req.target_language)
+
+@app.post("/api/v1/translate/back-translate")
+def back_translate_text(req: BackTranslateRequest):
+    return language_provider.back_translate(text=req.text, target_language=req.target_language)
+
+@app.post("/api/v1/translate/dialect")
+def adapt_dialect_text(req: DialectAdaptRequest):
+    return language_provider.adapt_dialect(
+        text=req.text,
+        target_language=req.target_language,
+        dialect_region=req.dialect_region
+    )
 
 @app.post("/api/v1/translate/batch")
 def batch_translate(req: BatchTranslateRequest):

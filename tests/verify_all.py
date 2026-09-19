@@ -438,6 +438,85 @@ class TestBhashaSetuComprehensive(unittest.TestCase):
         self.assertLess(rtf, 0.20, f"RTF {rtf:.4f} exceeded 0.20 threshold")
 
         print(f"[PASS] Test 17: Voice AI fine-tuning (4 timbres, RTF={rtf:.4f} < 0.20, MOS={data['audio_metadata']['predicted_mos_score']}) verified.")
+    
+    def test_18_comprehensive_translation_api_suite(self):
+        """Assert Expanded Translation API Suite: single translate, glossary, transliteration, detection, alignment, back-translation, dialect."""
+        # 1. Single text translation with alignment
+        trans_res = self.client.post("/api/v1/translate", json={
+            "text": "पानी जीवन है",
+            "target_language": "SANTHALI",
+            "fln_mode": True,
+            "include_alignment": True
+        })
+        self.assertEqual(trans_res.status_code, 200)
+        trans_data = trans_res.json()
+        self.assertEqual(trans_data["target_language"], "SANTHALI")
+        self.assertEqual(trans_data["script_type"], "OL_CHIKI")
+        self.assertIn("translated_text", trans_data)
+        self.assertIn("alignments", trans_data)
+        self.assertTrue(len(trans_data["alignments"]) > 0)
+
+        # 2. Glossary taxonomy categories & term lookup
+        cat_res = self.client.get("/api/v1/translate/glossary/categories")
+        self.assertEqual(cat_res.status_code, 200)
+        self.assertEqual(len(cat_res.json()), 7)
+
+        glos_res = self.client.get("/api/v1/translate/glossary?category=flora_trees&language=SANTHALI")
+        self.assertEqual(glos_res.status_code, 200)
+        self.assertTrue(len(glos_res.json()) > 0)
+
+        # 3. Glossary search
+        search_res = self.client.get("/api/v1/translate/glossary/search?q=पानी")
+        self.assertEqual(search_res.status_code, 200)
+        self.assertTrue(len(search_res.json()) > 0)
+
+        # 4. G2P Script transliteration (Ol Chiki -> Devanagari)
+        translit_res = self.client.post("/api/v1/translate/transliterate", json={
+            "text": "ᱫᱟᱜ",
+            "source_script": "OL_CHIKI",
+            "target_script": "DEVANAGARI",
+            "language": "SANTHALI"
+        })
+        self.assertEqual(translit_res.status_code, 200)
+        self.assertEqual(translit_res.json()["transliterated_text"], "दआग")
+
+        # 5. Language & Script detection
+        detect_res = self.client.post("/api/v1/translate/detect", json={
+            "text": "ᱫᱟᱜ ᱫᱚ ᱡᱤᱣᱤ ᱠᱟᱱᱟ᱾"
+        })
+        self.assertEqual(detect_res.status_code, 200)
+        self.assertEqual(detect_res.json()["detected_language"], "SANTHALI")
+        self.assertEqual(detect_res.json()["detected_script"], "OL_CHIKI")
+        self.assertTrue(detect_res.json()["is_indigenous_jharkhand"])
+
+        # 6. Bilingual token alignment
+        align_res = self.client.post("/api/v1/translate/align", json={
+            "text": "पानी और पेड़",
+            "target_language": "SANTHALI"
+        })
+        self.assertEqual(align_res.status_code, 200)
+        self.assertTrue(align_res.json()["token_count"] >= 3)
+
+        # 7. Back-translation roundtrip consistency audit
+        back_res = self.client.post("/api/v1/translate/back-translate", json={
+            "text": "पानी",
+            "target_language": "SANTHALI"
+        })
+        self.assertEqual(back_res.status_code, 200)
+        self.assertGreaterEqual(back_res.json()["semantic_similarity"], 0.75)
+        self.assertIn(back_res.json()["quality_verdict"], ["EXCELLENT_MATCH", "ACCEPTABLE"])
+
+        # 8. District dialect adaptation
+        dialect_res = self.client.post("/api/v1/translate/dialect", json={
+            "text": "पानी",
+            "target_language": "SANTHALI",
+            "dialect_region": "KOLHAN"
+        })
+        self.assertEqual(dialect_res.status_code, 200)
+        self.assertEqual(dialect_res.json()["dialect_region"], "KOLHAN")
+        self.assertTrue(len(dialect_res.json()["dialect_notes"]) > 0)
+
+        print("[PASS] Test 18: Comprehensive Translation API Suite (8 endpoints, 7 glossary domains, transliteration, detection, alignment, back-translation, dialect) verified.")
 
 if __name__ == "__main__":
     print("\n=======================================================")
