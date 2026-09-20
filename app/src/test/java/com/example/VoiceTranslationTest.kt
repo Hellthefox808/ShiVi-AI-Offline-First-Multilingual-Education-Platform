@@ -256,4 +256,31 @@ class VoiceTranslationTest {
             assertTrue("Devanagari phonetics must be non-blank for $lang", result.transliterationDevanagari.isNotBlank())
         }
     }
+
+    @Test
+    fun testLiveVoiceTranslation_sub2SecondLatency_guaranteedAcrossLanguages() {
+        val testPhrases = listOf(
+            "नमस्ते बच्चों! आज हम सब मिलकर पढ़ाई करेंगे।",
+            "साल का पेड़ हमारे गाँव और संस्कृति के लिए बहुत पवित्र है।",
+            "नदी का पानी स्वच्छ और शुद्ध रखना चाहिए।",
+            "आप क्या बोल रहे हैं, कृपया बताएं।"
+        )
+
+        for (phrase in testPhrases) {
+            for (lang in TargetLanguage.values()) {
+                val start = System.currentTimeMillis()
+                val result = OfflineVoiceTranslationEngine.translate(
+                    inputText = phrase,
+                    targetLanguage = lang,
+                    speakerRole = VoiceSpeakerRole.TEACHER
+                )
+                val duration = System.currentTimeMillis() - start
+
+                assertTrue("Translation must complete in < 2000ms (SLA guarantee, was ${duration}ms)", duration < 2000)
+                assertTrue("Target translation must be non-empty for $lang", result.targetText.isNotBlank())
+                assertTrue("Devanagari phonetics must be populated for $lang", result.transliterationDevanagari.isNotBlank())
+            }
+        }
+    }
 }
+

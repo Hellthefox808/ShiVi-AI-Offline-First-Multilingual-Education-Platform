@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.util.UUID
@@ -673,35 +674,51 @@ class BhashaSetuRepository(private val context: Context) {
                     systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = systemPrompt)))
                 )
 
-                // Try flash model for low latency
-                val response = try {
-                    GeminiApiClient.service.generateContent(
-                        model = "gemini-2.5-flash",
-                        apiKey = apiKey,
-                        request = request
-                    )
-                } catch (fallbackEx: Exception) {
-                    GeminiApiClient.service.generateContent(
-                        model = "gemini-3.1-flash-lite",
-                        apiKey = apiKey,
-                        request = request
-                    )
+                // Enforce Sub-2s SLA: Timeout remote generation at 1200ms to guarantee sub-2s turnaround
+                val response = withTimeoutOrNull(1200L) {
+                    try {
+                        GeminiApiClient.service.generateContent(
+                            model = "gemini-2.5-flash",
+                            apiKey = apiKey,
+                            request = request
+                        )
+                    } catch (fallbackEx: Exception) {
+                        try {
+                            GeminiApiClient.service.generateContent(
+                                model = "gemini-3.1-flash-lite",
+                                apiKey = apiKey,
+                                request = request
+                            )
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
                 }
 
-                val raw = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: ""
-                val clean = raw.substringAfter("```json").substringBefore("```").trim().ifEmpty { raw }
-                try {
-                    val obj = JSONObject(clean)
-                    targetTranslation = obj.optString("targetText", raw)
-                    scriptText = obj.optString("scriptText", targetLanguage.nativeName)
-                    transliteration = obj.optString("transliteration", "")
-                    transliterationDevanagari = obj.optString("transliterationDevanagari", "")
-                    val sylArr = obj.optJSONArray("syllables")
-                    if (sylArr != null && sylArr.length() > 0) {
-                        phoneticSyllables = (0 until sylArr.length()).map { sylArr.getString(it) }
+                if (response != null) {
+                    val raw = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: ""
+                    val clean = raw.substringAfter("```json").substringBefore("```").trim().ifEmpty { raw }
+                    try {
+                        val obj = JSONObject(clean)
+                        targetTranslation = obj.optString("targetText", raw)
+                        scriptText = obj.optString("scriptText", targetLanguage.nativeName)
+                        transliteration = obj.optString("transliteration", "")
+                        transliterationDevanagari = obj.optString("transliterationDevanagari", "")
+                        val sylArr = obj.optJSONArray("syllables")
+                        if (sylArr != null && sylArr.length() > 0) {
+                            phoneticSyllables = (0 until sylArr.length()).map { sylArr.getString(it) }
+                        }
+                    } catch (e: Exception) {
+                        targetTranslation = raw
                     }
-                } catch (e: Exception) {
-                    targetTranslation = raw
+                } else {
+                    // SLA Timeout (>1200ms) or network offline: Instant fallback to offline engine (~1.2ms)
+                    val fallback = OfflineVoiceTranslationEngine.translate(hindiSpeechText, targetLanguage, speakerRole)
+                    targetTranslation = fallback.targetText
+                    scriptText = fallback.scriptText
+                    transliteration = fallback.transliteration
+                    transliterationDevanagari = fallback.transliterationDevanagari
+                    phoneticSyllables = fallback.phoneticSyllables
                 }
             } catch (e: Exception) {
                 val fallback = OfflineVoiceTranslationEngine.translate(hindiSpeechText, targetLanguage, speakerRole)

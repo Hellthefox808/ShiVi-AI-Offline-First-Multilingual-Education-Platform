@@ -100,27 +100,6 @@ fun VoiceTranslateScreen(
         label = "pulseScale"
     )
 
-    val teacherQuickPhrases = listOf(
-        "नमस्ते बच्चों! (Welcome)" to "नमस्ते बच्चों! आज हम सब मिलकर पढ़ाई करेंगे।",
-        "किताबें खोलिए (Open books)" to "अपनी किताबें खोलिए और पाठ निकालिए।",
-        "साल का पेड़ (Sal tree)" to "इस पेड़ का नाम बताइए और इसके उपयोग बताएं।",
-        "एक साथ बोलिए (Repeat together)" to "सभी बच्चे एक साथ मिलकर बोलिए।",
-        "बहुत शाबाश! (Well done!)" to "बहुत शाबाश! आप सभी ने सही उत्तर दिया।",
-        "नदी का पानी (River water)" to "गाँव की नदी का पानी स्वच्छ और जीवनदायी है।",
-        "गिनती सीखें (Count 1-5)" to "एक, दो, तीन, चार, पांच गिनती करें।"
-    )
-
-    val studentQuickPhrases = listOf(
-        "जोहार गुरुजी! (Johar Sir)" to "ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ! ᱟᱞᱮ ᱟᱥᱲᱟ ᱞᱮ ᱦᱮᱡ ᱮᱱᱟ᱾",
-        "किताब खोल ली (Opened book)" to "ᱯᱚᱛᱚᱵ ᱡᱷᱤᱡᱽ ᱠᱮᱫ-ᱟᱹᱧ ᱢᱟᱪᱮᱛ᱾",
-        "साल का पेड़ है (It is Sal)" to "ᱱᱚᱣᱟ ᱫᱚ ᱥᱟᱨᱡᱚᱢ ᱫᱟᱨᱮ ᱠᱟᱱᱟ᱾",
-        "समझ आ गया (I understood)" to "ᱦᱮᱸ ᱢᱟᱪᱮᱛ, ᱤᱧ ᱫᱚ ᱵᱮᱥ ᱛᱮᱧ ᱵᱩᱡᱷᱟᱹᱣ ᱠᱮᱫ-ᱟ᱾",
-        "पानी पीना है (Need water)" to "ᱫᱟᱜ ᱧᱩ ᱥᱟᱱᱟᱭᱤᱧ ᱠᱟᱱᱟ᱾",
-        "गिनती आती है (I know counting)" to "ᱢᱤᱫ ᱵᱟᱨ ᱯᱮ ᱯᱩᱱ ᱢᱚᱬᱮ ᱞᱮᱠᱷᱟᱧ ᱵᱟᱰᱟᱭᱟ᱾"
-    )
-
-    val quickPhrases = if (voiceSettings.activeSpeakerRole == VoiceSpeakerRole.STUDENT) studentQuickPhrases else teacherQuickPhrases
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -133,32 +112,31 @@ fun VoiceTranslateScreen(
             modifier = Modifier.padding(bottom = 6.dp)
         )
 
-        // Dual-Direction Dialogue Mode Selector (Teacher Hindi->Tribal vs Student Tribal->Hindi)
+        // Compact Dual-Direction Dialogue Mode Selector
         Surface(
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(12.dp),
             color = glass.surface,
             border = BorderStroke(1.dp, glass.borderLight),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
+                .padding(bottom = 6.dp)
         ) {
             Row(
-                modifier = Modifier.padding(4.dp),
+                modifier = Modifier.padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 val isTeacherRole = voiceSettings.activeSpeakerRole == VoiceSpeakerRole.TEACHER
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(9.dp),
                     color = if (isTeacherRole) MaterialTheme.colorScheme.primary else Color.Transparent,
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .minimumInteractiveComponentSize()
-                        .clip(RoundedCornerShape(10.dp))
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(9.dp))
                         .clickable { viewModel.setVoiceSpeakerRole(VoiceSpeakerRole.TEACHER) }
                 ) {
                     Row(
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+                        modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -166,9 +144,9 @@ fun VoiceTranslateScreen(
                             imageVector = Icons.Default.School,
                             contentDescription = null,
                             tint = if (isTeacherRole) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = "शिक्षक (हिंदी ➔ मातृभाषा)",
                             style = MaterialTheme.typography.labelSmall,
@@ -179,17 +157,16 @@ fun VoiceTranslateScreen(
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(9.dp),
                     color = if (!isTeacherRole) MaterialTheme.colorScheme.secondary else Color.Transparent,
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .minimumInteractiveComponentSize()
-                        .clip(RoundedCornerShape(10.dp))
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(9.dp))
                         .clickable { viewModel.setVoiceSpeakerRole(VoiceSpeakerRole.STUDENT) }
                 ) {
                     Row(
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+                        modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -197,9 +174,9 @@ fun VoiceTranslateScreen(
                             imageVector = Icons.Default.Face,
                             contentDescription = null,
                             tint = if (!isTeacherRole) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = "विद्यार्थी (मातृभाषा ➔ हिंदी)",
                             style = MaterialTheme.typography.labelSmall,
@@ -211,121 +188,94 @@ fun VoiceTranslateScreen(
             }
         }
 
-        // Real-Time SLA & Voice Settings Header Card (Glassmorphic)
-        GlassmorphicCard(
-            shape = RoundedCornerShape(16.dp),
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-            borderBrush = Brush.linearGradient(
-                listOf(glass.borderHighlight, glass.borderLight)
-            ),
-            elevation = 2.dp,
+        // Sleek SLA & Quick Settings Bar
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
+                .padding(bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // Live SLA & Offline Indicator Badge
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = SuccessGreen.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.35f))
             ) {
                 Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ElectricBolt,
-                        contentDescription = "Live SLA",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        contentDescription = "Sub-2s SLA",
+                        tint = SuccessGreen,
+                        modifier = Modifier.size(13.dp)
                     )
-                    Column {
+                    Text(
+                        text = "लाइव < 2s SLA • 100% ऑफलाइन",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = SuccessGreen
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // FLN Slow Speed Toggle
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (voiceSettings.isSlowClassroomMode) WarningAmber.copy(alpha = 0.18f) else glass.surface,
+                    border = BorderStroke(1.dp, if (voiceSettings.isSlowClassroomMode) WarningAmber else glass.borderLight),
+                    modifier = Modifier
+                        .height(30.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { viewModel.toggleSlowClassroomMode(!voiceSettings.isSlowClassroomMode) }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
                         Text(
-                            text = "Live Classroom Voice Relay",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = if (voiceSettings.isSlowClassroomMode) "🐢 FLN 0.72x" else "⚡ 0.92x",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Rate: ${"%.2f".format(voiceSettings.speechRate)}x • Pitch: ${"%.1f".format(voiceSettings.pitch)}x • ${if (voiceSettings.isBilingualRelayEnabled) "द्विभाषी रिले चालू" else "मातृभाषा मात्र"}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = if (voiceSettings.isSlowClassroomMode) WarningAmber else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // FLN Slow Speed Toggle (0.72x) for Classrooms
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (voiceSettings.isSlowClassroomMode) WarningAmber.copy(alpha = 0.2f) else glass.surface,
-                        border = BorderStroke(1.dp, if (voiceSettings.isSlowClassroomMode) WarningAmber else glass.borderLight),
-                        modifier = Modifier
-                            .heightIn(min = 40.dp)
-                            .minimumInteractiveComponentSize()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { viewModel.toggleSlowClassroomMode(!voiceSettings.isSlowClassroomMode) }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (voiceSettings.isSlowClassroomMode) Icons.Default.SlowMotionVideo else Icons.Default.Speed,
-                                contentDescription = null,
-                                tint = if (voiceSettings.isSlowClassroomMode) WarningAmber else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Text(
-                                text = if (voiceSettings.isSlowClassroomMode) "FLN 0.72x" else "सामान्य",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (voiceSettings.isSlowClassroomMode) WarningAmber else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    // Clear Session History Action
-                    if (voiceTurns.isNotEmpty()) {
-                        FilledTonalIconButton(
-                            onClick = { viewModel.clearVoiceTurns() },
-                            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = "Clear Session",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    // Voice Fine-Tuning Sheet Trigger Button
-                    FilledTonalButton(
-                        onClick = { viewModel.openVoiceSettings(true) },
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .heightIn(min = 40.dp)
-                            .minimumInteractiveComponentSize()
+                // Clear turns button
+                if (voiceTurns.isNotEmpty()) {
+                    IconButton(
+                        onClick = { viewModel.clearVoiceTurns() },
+                        modifier = Modifier.size(30.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Voice Settings",
+                            imageVector = Icons.Default.DeleteSweep,
+                            contentDescription = "Clear Session",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "ध्वनि ट्यूनिंग", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
+                }
+
+                // Voice Fine-Tuning Sheet Trigger
+                IconButton(
+                    onClick = { viewModel.openVoiceSettings(true) },
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Voice Settings",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }

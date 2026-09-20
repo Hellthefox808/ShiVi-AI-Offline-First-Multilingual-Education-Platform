@@ -118,6 +118,11 @@ class SpeechToTextManager(private val context: Context) {
                 putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+                // Sub-2s SLA & Offline-First: Prefer local on-device speech model
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+                }
+                putExtra("android.speech.extra.DICTATION_MODE", true)
             }
 
             speechRecognizer?.startListening(intent)

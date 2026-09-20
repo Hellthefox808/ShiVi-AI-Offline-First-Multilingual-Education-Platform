@@ -259,12 +259,49 @@ fun LanguageSelectorChipRow(
 ) {
     val glass = LocalGlassColors.current
     Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Translate,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "अनुवाद की भाषा चुनें (Select Target Language)",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                modifier = Modifier.padding(start = 4.dp)
+            ) {
+                Text(
+                    text = "हिंदी ➔ ${selectedLanguage.displayName}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
         Text(
-            text = "लक्ष्य मातृभाषा (Target Language):",
-            style = MaterialTheme.typography.labelLarge,
+            text = "कक्षा संवाद की मातृभाषा चुनें (Hindi ➔ Santhali / Ho / Mundari):",
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 6.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -277,10 +314,15 @@ fun LanguageSelectorChipRow(
                     TargetLanguage.HO -> HoAccent
                     TargetLanguage.MUNDARI -> MundariAccent
                 }
+                val scriptName = when (lang) {
+                    TargetLanguage.SANTHALI -> "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)"
+                    TargetLanguage.HO -> "Warang Chiti (𑢹𑣉𑣉)"
+                    TargetLanguage.MUNDARI -> "Devanagari (देवनागरी)"
+                }
                 
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = if (isSelected) accentColor.copy(alpha = 0.14f) else glass.surface,
+                    color = if (isSelected) accentColor.copy(alpha = 0.16f) else glass.surface,
                     border = if (isSelected) {
                         BorderStroke(2.dp, accentColor)
                     } else {
@@ -289,7 +331,7 @@ fun LanguageSelectorChipRow(
                     shadowElevation = if (isSelected) 3.dp else 1.dp,
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 52.dp)
+                        .heightIn(min = 58.dp)
                         .minimumInteractiveComponentSize()
                         .clip(RoundedCornerShape(14.dp))
                         .clickable { onLanguageSelected(lang) }
@@ -301,20 +343,39 @@ fun LanguageSelectorChipRow(
                         .testTag("lang_chip_${lang.code}")
                 ) {
                     Column(
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = lang.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = accentColor,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                            Text(
+                                text = lang.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         Text(
                             text = lang.nativeName,
                             style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = scriptName.substringBefore(" "),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = if (isSelected) accentColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.outline
                         )
                     }
                 }

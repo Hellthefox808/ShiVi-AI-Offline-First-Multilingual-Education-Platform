@@ -27,4 +27,26 @@ class BhashaSetuApplication : Application() {
             repository.initializePreloadedDataIfNeeded()
         }
     }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        when (level) {
+            TRIM_MEMORY_RUNNING_CRITICAL,
+            TRIM_MEMORY_RUNNING_LOW,
+            TRIM_MEMORY_COMPLETE -> {
+                Log.w("BhashaSetuApp", "System memory pressure event ($level) on device. Triggering memory cache purge.")
+                System.gc()
+            }
+            else -> {
+                Log.d("BhashaSetuApp", "Trim memory level: $level")
+            }
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        Log.w("BhashaSetuApp", "System critical onLowMemory triggered! Purging temporary caches.")
+        System.gc()
+    }
 }
+

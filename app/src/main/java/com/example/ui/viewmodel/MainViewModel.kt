@@ -354,7 +354,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             timestamp = System.currentTimeMillis()
         )
 
-        voiceTurns.value = voiceTurns.value + turn
+        val updated = voiceTurns.value + turn
+        voiceTurns.value = if (updated.size > 40) updated.takeLast(40) else updated
 
         // Play bilingual relay automatically
         playBilingualRelay(turn)
@@ -653,7 +654,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 targetLanguage = selectedLanguage.value,
                 speakerRole = role
             )
-            voiceTurns.value = voiceTurns.value + turn
+            val updated = voiceTurns.value + turn
+            voiceTurns.value = if (updated.size > 40) updated.takeLast(40) else updated
             voiceInputText.value = ""
 
             if (voiceSettings.value.autoPlayOnTranslate) {
