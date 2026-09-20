@@ -17,8 +17,8 @@ android {
     applicationId = "com.bhashasetu.jharkhand"
     minSdk = 24
     targetSdk = 36
-    versionCode = 2
-    versionName = "2.0-PROD"
+    versionCode = 4
+    versionName = "4.0-PROD"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
