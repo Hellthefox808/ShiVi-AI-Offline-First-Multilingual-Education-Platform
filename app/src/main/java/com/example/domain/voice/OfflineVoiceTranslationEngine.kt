@@ -1038,6 +1038,9 @@ object OfflineVoiceTranslationEngine {
      */
     fun translateStudentToTeacher(tribalSpeech: String, lang: TargetLanguage): VoiceTranslationResult {
         val lower = tribalSpeech.lowercase().trim()
+        if (lower.isBlank()) {
+            return VoiceTranslationResult("", "Devanagari Hindi", "", "")
+        }
 
         return when {
             // Student Greetings / Johar
