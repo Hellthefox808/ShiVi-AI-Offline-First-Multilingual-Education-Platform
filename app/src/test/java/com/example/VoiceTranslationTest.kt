@@ -1,6 +1,7 @@
 package com.example
 
 import com.example.domain.model.TargetLanguage
+import com.example.domain.model.VoiceGender
 import com.example.domain.model.VoiceSpeakerRole
 import com.example.domain.model.VoiceSettings
 import com.example.domain.model.VoiceTurn
@@ -281,6 +282,34 @@ class VoiceTranslationTest {
                 assertTrue("Devanagari phonetics must be populated for $lang", result.transliterationDevanagari.isNotBlank())
             }
         }
+    }
+
+    @Test
+    fun testVoiceGender_multipliersAndSettings_behaveCorrectly() {
+        val defaultSettings = VoiceSettings()
+        assertEquals("Default voice gender must be FEMALE", VoiceGender.FEMALE, defaultSettings.voiceGender)
+        assertTrue("Female pitch multiplier must be > 1.0", VoiceGender.FEMALE.pitchMultiplier > 1.0f)
+        assertTrue("Male pitch multiplier must be < 1.0", VoiceGender.MALE.pitchMultiplier < 1.0f)
+
+        val maleSettings = defaultSettings.copy(voiceGender = VoiceGender.MALE)
+        assertEquals(VoiceGender.MALE, maleSettings.voiceGender)
+        assertEquals("पुरुष", VoiceGender.MALE.displayNameHindi)
+        assertEquals("👨", VoiceGender.MALE.icon)
+        assertEquals("👩", VoiceGender.FEMALE.icon)
+    }
+
+    @Test
+    fun testRagGlossaryRetrieval_zeroHallucination() {
+        val speech = "आज हम साल का पेड़ और पानी के बारे में पढ़ेंगे"
+        val ragSanthali = OfflineVoiceTranslationEngine.retrieveRagGlossaryContext(speech, TargetLanguage.SANTHALI)
+        assertTrue("RAG must contain verified Sarjom/Dare for Santhali", ragSanthali.contains("पेड़") && ragSanthali.contains("दारे"))
+        assertTrue("RAG must contain verified Dak for water", ragSanthali.contains("पानी") && ragSanthali.contains("दाग"))
+
+        val ragHo = OfflineVoiceTranslationEngine.retrieveRagGlossaryContext(speech, TargetLanguage.HO)
+        assertTrue("RAG must contain verified Ho terms", ragHo.contains("पेड़"))
+
+        val ragMundari = OfflineVoiceTranslationEngine.retrieveRagGlossaryContext(speech, TargetLanguage.MUNDARI)
+        assertTrue("RAG must contain verified Mundari terms", ragMundari.contains("पानी"))
     }
 }
 

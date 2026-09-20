@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.domain.model.TargetLanguage
+import com.example.domain.model.VoiceGender
 import com.example.domain.model.VoiceSettings
 import com.example.domain.model.VoiceSpeakerRole
 import com.example.domain.model.VoiceTimbre
@@ -226,6 +227,34 @@ fun VoiceTranslateScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                // Voice Gender (Male / Female) Quick Toggle
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = glass.surface,
+                    border = BorderStroke(1.dp, glass.borderLight),
+                    modifier = Modifier
+                        .height(30.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            val next = if (voiceSettings.voiceGender == VoiceGender.FEMALE) VoiceGender.MALE else VoiceGender.FEMALE
+                            viewModel.setVoiceGender(next)
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text(text = voiceSettings.voiceGender.icon, fontSize = 11.sp)
+                        Text(
+                            text = voiceSettings.voiceGender.displayNameHindi,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
                 // FLN Slow Speed Toggle
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -671,6 +700,7 @@ fun VoiceTranslateScreen(
             VoiceSettingsSheetContent(
                 settings = voiceSettings,
                 targetLanguage = selectedLanguage,
+                onGenderChange = { viewModel.setVoiceGender(it) },
                 onTimbreChange = { viewModel.setVoiceTimbre(it) },
                 onRateChange = { viewModel.updateSpeechRate(it) },
                 onPitchChange = { viewModel.updatePitch(it) },
@@ -708,6 +738,7 @@ fun VoiceTranslateScreen(
 fun VoiceSettingsSheetContent(
     settings: VoiceSettings,
     targetLanguage: TargetLanguage,
+    onGenderChange: (VoiceGender) -> Unit,
     onTimbreChange: (VoiceTimbre) -> Unit,
     onRateChange: (Float) -> Unit,
     onPitchChange: (Float) -> Unit,
@@ -750,6 +781,57 @@ fun VoiceSettingsSheetContent(
         }
 
         HorizontalDivider()
+
+        // 0. Voice Gender Selection (Male / Female)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "आवाज़ का लिंग (Voice Gender):",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                VoiceGender.values().forEach { gender ->
+                    val isSelected = (settings.voiceGender == gender)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(
+                            1.5.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onGenderChange(gender) }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(text = gender.icon, fontSize = 18.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = gender.displayNameHindi,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = gender.displayNameEnglish,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         // 1. Voice Timbre Presets
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

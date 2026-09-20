@@ -1003,6 +1003,30 @@ object OfflineVoiceTranslationEngine {
         return syllables.take(8).ifEmpty { listOf(devaText.take(6)) }
     }
 
+    /**
+     * RAG (Retrieval Augmented Grounding): Extracts verified MTB-MLE curriculum terms
+     * for spoken text to eliminate AI hallucination across Santhali, Ho, and Mundari.
+     */
+    fun retrieveRagGlossaryContext(text: String, lang: TargetLanguage): String {
+        val tokens = text.replace(Regex("[।?!,.]"), "").trim().split(Regex("\\s+"))
+        val matched = mutableListOf<String>()
+        for (token in tokens) {
+            val term = LEXICON[token]
+            if (term != null) {
+                when (lang) {
+                    TargetLanguage.SANTHALI -> matched.add("$token -> ${term.satNative} (${term.satDeva})")
+                    TargetLanguage.HO -> matched.add("$token -> ${term.hoNative} (${term.hoDeva})")
+                    TargetLanguage.MUNDARI -> matched.add("$token -> ${term.munNative}")
+                }
+            }
+        }
+        return if (matched.isNotEmpty()) {
+            "Verified JCERT MTB-MLE RAG Glossary (STRICT: Use these exact terms, do not hallucinate): " + matched.distinct().joinToString(", ")
+        } else {
+            "STRICT GROUNDING: Do not hallucinate tribal terms. Ground translation strictly in authentic indigenous vocabulary."
+        }
+    }
+
     private fun getScriptName(lang: TargetLanguage): String = when (lang) {
         TargetLanguage.SANTHALI -> "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)"
         TargetLanguage.HO -> "Warang Chiti (ᱣᱟᱨᱟᱝ ᱪᱤᱛᱤ)"

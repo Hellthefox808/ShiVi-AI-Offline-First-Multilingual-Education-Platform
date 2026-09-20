@@ -253,10 +253,21 @@ enum class VoiceTimbre(
     )
 }
 
+enum class VoiceGender(
+    val displayNameHindi: String,
+    val displayNameEnglish: String,
+    val icon: String,
+    val pitchMultiplier: Float
+) {
+    FEMALE("महिला", "Female", "👩", 1.15f),
+    MALE("पुरुष", "Male", "👨", 0.85f)
+}
+
 data class VoiceSettings(
     val speechRate: Float = 0.92f,
     val pitch: Float = 1.0f,
     val timbre: VoiceTimbre = VoiceTimbre.CLEAR_EDUCATIONAL,
+    val voiceGender: VoiceGender = VoiceGender.FEMALE,
     val relayPauseMs: Long = 450L,
     val isBilingualRelayEnabled: Boolean = false,
     val isSlowClassroomMode: Boolean = false,

@@ -633,10 +633,12 @@ class BhashaSetuRepository(private val context: Context) {
 
         val isStudent = (speakerRole == VoiceSpeakerRole.STUDENT)
 
+        val ragContext = OfflineVoiceTranslationEngine.retrieveRagGlossaryContext(hindiSpeechText, targetLanguage)
         val systemPrompt = if (isStudent) {
             """
             You are a real-time classroom speech translation engine translating tribal student speech in ${targetLanguage.displayName} (${targetLanguage.nativeName}) into Hindi for the teacher.
-            Target response time is SUB-3 SECONDS.
+            Target response time is SUB-2 SECONDS. ZERO HALLUCINATION POLICY.
+            $ragContext
             Provide JSON with:
             {
                "targetText": "student original or normalized tribal phrase in ${targetLanguage.displayName}",
@@ -649,7 +651,8 @@ class BhashaSetuRepository(private val context: Context) {
         } else {
             """
             You are a real-time speech translation engine for classroom Hindi to ${targetLanguage.displayName} (${targetLanguage.nativeName}).
-            Target response time is SUB-3 SECONDS.
+            Target response time is SUB-2 SECONDS. ZERO HALLUCINATION POLICY.
+            $ragContext
             Provide JSON with:
             {
                "targetText": "spoken sentence in ${targetLanguage.displayName}",

@@ -39,6 +39,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ttsManager.interruptPlayback()
             }
         }
+        ttsManager.setVoiceGender(voiceSettings.value.voiceGender)
     }
 
     // State flows from repository
@@ -727,6 +728,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updatePitch(pitch: Float) {
         voiceSettings.value = voiceSettings.value.copy(pitch = pitch)
         ttsManager.setPitch(pitch)
+    }
+
+    fun setVoiceGender(gender: VoiceGender) {
+        voiceSettings.value = voiceSettings.value.copy(voiceGender = gender)
+        ttsManager.setVoiceGender(gender)
     }
 
     fun updateRelayPauseMs(pauseMs: Long) {

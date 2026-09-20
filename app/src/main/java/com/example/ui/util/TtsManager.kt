@@ -7,6 +7,7 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import com.example.domain.model.VoiceGender
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
@@ -29,8 +30,13 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
         private set
     var currentPitch: Float = 1.0f
         private set
+    var currentVoiceGender: VoiceGender = VoiceGender.FEMALE
+        private set
     var currentRelayPauseMs: Long = 450L
         private set
+
+    val effectivePitch: Float
+        get() = (currentPitch * currentVoiceGender.pitchMultiplier).coerceIn(0.6f, 1.8f)
 
     init {
         try {
@@ -44,7 +50,8 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
             isInitialized = true
             tts?.language = Locale.forLanguageTag("hi-IN")
-            tts?.setPitch(currentPitch)
+            applyNativeGenderVoice(currentVoiceGender)
+            tts?.setPitch(effectivePitch)
             tts?.setSpeechRate(currentSpeechRate)
 
             tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -85,7 +92,38 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
     fun setPitch(pitch: Float) {
         currentPitch = pitch.coerceIn(0.7f, 1.4f)
         if (isInitialized) {
-            tts?.setPitch(currentPitch)
+            tts?.setPitch(effectivePitch)
+        }
+    }
+
+    fun setVoiceGender(gender: VoiceGender) {
+        currentVoiceGender = gender
+        if (isInitialized) {
+            applyNativeGenderVoice(gender)
+            tts?.setPitch(effectivePitch)
+        }
+    }
+
+    private fun applyNativeGenderVoice(gender: VoiceGender) {
+        try {
+            val voices = tts?.voices ?: return
+            val targetLocale = Locale.forLanguageTag("hi-IN")
+            val isFemale = gender == VoiceGender.FEMALE
+            val matchingVoice = voices.firstOrNull { voice ->
+                val matchesLang = voice.locale?.language.equals(targetLocale.language, ignoreCase = true)
+                val nameLower = (voice.name ?: "").lowercase(Locale.ROOT)
+                matchesLang && if (isFemale) {
+                    nameLower.contains("female") || nameLower.contains("woman") || nameLower.contains("#f")
+                } else {
+                    nameLower.contains("male") || nameLower.contains("man") || nameLower.contains("#m")
+                }
+            }
+            if (matchingVoice != null) {
+                tts?.voice = matchingVoice
+                Log.d("TtsManager", "Applied native gender voice: ${matchingVoice.name}")
+            }
+        } catch (e: Exception) {
+            Log.d("TtsManager", "Native voice selection fallback to pitch modulation: ${e.message}")
         }
     }
 
@@ -137,7 +175,7 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
                 tts?.language = Locale.forLanguageTag("hi-IN")
             }
 
-            tts?.setPitch(currentPitch)
+            tts?.setPitch(effectivePitch)
             tts?.setSpeechRate(overrideRate ?: currentSpeechRate)
 
             val params = Bundle().apply {
@@ -186,7 +224,7 @@ class TtsManager(private val context: Context) : TextToSpeech.OnInitListener {
 
         try {
             tts?.language = Locale.forLanguageTag("hi-IN")
-            tts?.setPitch(currentPitch)
+            tts?.setPitch(effectivePitch)
             tts?.setSpeechRate(currentSpeechRate)
 
             // Step 1: Queue Hindi
