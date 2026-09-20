@@ -464,11 +464,54 @@ class LanguageProviderService:
                 translit_hi = f"शरीर के अंग: {med.get('translit_hi', 'मेद')} (देखना), {lutur.get('translit_hi', 'लुंतूर')} (सुनना), {ti.get('translit_hi', 'ती')} (कार्य करना)।"
                 translit_lat = f"Sharir ke ang: {med.get('translit_lat', 'med')} (dekhna), {lutur.get('translit_lat', 'lutur')} (sunna), {ti.get('translit_lat', 'ti')} (karya karna)."
 
-        # Fallback / General Classroom Instructions
+        # Spoken Speech Self-Reference ("मैं बोल रहा हूँ", "बोल रहा हूँ")
+        elif any(k in prompt_clean for k in ["बोल रहा हूँ", "बोल रहा हूं", "मैं बोल रहा"]):
+            if lang_key == "SANTHALI":
+                native = "ᱤᱧ ᱞᱟᱹᱭᱮᱫᱟᱹᱧ᱾"
+                translit_hi = "इञ लयदाञ।"
+                translit_lat = "Inj layedanj."
+            elif lang_key == "HO":
+                native = "ᱟᱹᱧ ᱠᱟᱡᱤᱛᱟᱱᱟᱹᱧ᱾"
+                translit_hi = "अञ काजितानाञ।"
+                translit_lat = "Anj kajitananj."
+            else:
+                native = "अञ काजी तनञ।"
+                translit_hi = "अञ काजी तनञ।"
+                translit_lat = "Anj kaji tananj."
+
+        # Fallback / General Classroom Instructions & Token-by-Token Rule Synthesizer
         else:
-            native = f"ᱟᱥᱲᱟ ᱨᱮ ᱥᱮᱪᱮᱫ: {prompt_clean}" if lang_key == "SANTHALI" else f"इतुन आसड़ा रे: {prompt_clean}"
-            translit_hi = f"आसड़ा रे सेचेद: {prompt_clean}"
-            translit_lat = f"Asra re seched: {prompt_clean}"
+            words = re.findall(r"[\w\u0900-\u097F]+|[।?!,.]", prompt_clean)
+            if not words:
+                words = prompt_clean.split()
+            
+            target_words = []
+            deva_words = []
+            lat_words = []
+
+            for w in words:
+                if w in terms:
+                    target_words.append(terms[w]["native"])
+                    deva_words.append(terms[w]["translit_hi"])
+                    lat_words.append(terms[w]["translit_lat"])
+                else:
+                    if lang_key == "SANTHALI":
+                        ol_chiki = "".join(DEVANAGARI_TO_OL_CHIKI.get(ch, ch) for ch in w)
+                        target_words.append(ol_chiki)
+                        deva_words.append(w)
+                        lat_words.append("".join(OL_CHIKI_TO_LATIN.get(DEVANAGARI_TO_OL_CHIKI.get(ch, ""), ch) for ch in w))
+                    else:
+                        target_words.append(w)
+                        deva_words.append(w)
+                        lat_words.append(w)
+
+            native = " ".join(target_words)
+            translit_hi = " ".join(deva_words)
+            translit_lat = " ".join(lat_words)
+            if lang_key == "SANTHALI" and not native.endswith("᱾"):
+                native += "᱾"
+            elif not native.endswith("।") and not native.endswith("᱾") and not native.endswith("?"):
+                native += "।"
 
         return {
             "target_language": lang_key,

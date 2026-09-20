@@ -201,4 +201,59 @@ class VoiceTranslationTest {
         println("Offline Voice Engine Concurrency: $totalCalls calls across 8 threads in ${totalDuration}ms (avg: ${avgLatency}ms)")
         assertTrue("Average translation throughput must be under 30ms (was ${avgLatency}ms)", avgLatency < 30.0)
     }
+
+    @Test
+    fun testTeacherMode_arbitrarySpokenSpeech_doesNotRepeatChoralPrompt() {
+        // User reports: "Jaise main koi sa bhi word bol raha hoon to bas ek hi cheez repeat kar raha hai"
+        val input = "मैं बोल रहा हूँ"
+        val result = OfflineVoiceTranslationEngine.translate(
+            inputText = input,
+            targetLanguage = TargetLanguage.SANTHALI,
+            speakerRole = VoiceSpeakerRole.TEACHER
+        )
+
+        assertFalse("Must NOT trigger choral recitation prompt", result.targetText.contains("ᱥᱟᱱᱟᱢ ᱜᱤᱫᱽᱨᱟᱹ ᱢᱤᱫ ᱛᱮ ᱞᱟᱹᱭ ᱯᱮ"))
+        assertFalse("Must NOT use static Asra echo", result.targetText.contains("ᱟᱥᱲᱟ ᱨᱮ ᱥᱮᱪᱮᱫ"))
+        assertTrue("Must translate to I am speaking in Ol Chiki", result.targetText.contains("ᱞᱟᱹᱭ") || result.targetText.contains("ᱤᱧ"))
+        assertTrue("Devanagari phonetics must be present for Indian TTS", result.transliterationDevanagari.isNotBlank())
+        assertFalse("Devanagari phonetics must NOT be static prompt", result.transliterationDevanagari.contains("सानाम गिदरा"))
+    }
+
+    @Test
+    fun testTeacherMode_arbitrarySingleWords_translateAccurately() {
+        val testWords = listOf(
+            "पेड़" to "ᱫᱟᱨᱮ",
+            "पानी" to "ᱫᱟᱜ",
+            "घर" to "ᱚᱲᱟᱜ",
+            "हाथ" to "ᱛᱤ",
+            "सूरज" to "ᱥᱤᱝᱜᱤ"
+        )
+
+        for ((hindiWord, expectedOlChiki) in testWords) {
+            val result = OfflineVoiceTranslationEngine.translate(
+                inputText = hindiWord,
+                targetLanguage = TargetLanguage.SANTHALI,
+                speakerRole = VoiceSpeakerRole.TEACHER
+            )
+            assertTrue("Word '$hindiWord' must translate to '$expectedOlChiki'", result.targetText.contains(expectedOlChiki))
+            assertFalse("Must NOT repeat Asra re seched prefix for word '$hindiWord'", result.targetText.contains("ᱟᱥᱲᱟ ᱨᱮ ᱥᱮᱪᱮᱫ"))
+            assertTrue("Devanagari phonetics must be non-blank", result.transliterationDevanagari.isNotBlank())
+            assertTrue("Phonetic syllables must be generated", result.phoneticSyllables.isNotEmpty())
+        }
+    }
+
+    @Test
+    fun testTeacherMode_whatAreYouSpeaking_translatesAccuratelyAcrossLanguages() {
+        val input = "आप क्या बोल रहे हैं"
+        for (lang in TargetLanguage.values()) {
+            val result = OfflineVoiceTranslationEngine.translate(
+                inputText = input,
+                targetLanguage = lang,
+                speakerRole = VoiceSpeakerRole.TEACHER
+            )
+            assertFalse("Must not trigger repetition prompt for $lang", result.targetText.contains("ᱥᱟᱱᱟᱢ ᱜᱤᱫᱽᱨᱟᱹ"))
+            assertTrue("Target translation must be non-empty for $lang", result.targetText.isNotBlank())
+            assertTrue("Devanagari phonetics must be non-blank for $lang", result.transliterationDevanagari.isNotBlank())
+        }
+    }
 }
