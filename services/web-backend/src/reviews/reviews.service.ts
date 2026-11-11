@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PersistenceService } from '../common/persistence.service';
 
 export interface ReviewItem {
   reviewId: string;
@@ -19,7 +20,11 @@ export interface ReviewItem {
 
 @Injectable()
 export class ReviewsService {
-  private reviews: ReviewItem[] = [
+  constructor(@Optional() private readonly persistence?: PersistenceService) {}
+
+  private readonly COLLECTION = 'reviews';
+
+  private readonly seedReviews: ReviewItem[] = [
     {
       reviewId: 'REV-001',
       lessonId: 'LES-001',
@@ -37,6 +42,22 @@ export class ReviewsService {
       reviewedAt: '2026-08-25T11:00:00.000Z'
     }
   ];
+
+  private get reviews(): ReviewItem[] {
+    if (!this.persistence) {
+      if (!this.memoryFallback) this.memoryFallback = [...this.seedReviews];
+      return this.memoryFallback;
+    }
+    return this.persistence.read<ReviewItem[]>(this.COLLECTION, [...this.seedReviews]);
+  }
+
+  private memoryFallback: ReviewItem[] | null = null;
+
+  private persist(): void {
+    if (this.persistence) {
+      this.persistence.write(this.COLLECTION, this.reviews);
+    }
+  }
 
   findAll(): ReviewItem[] {
     return this.reviews;
@@ -68,6 +89,7 @@ export class ReviewsService {
       reviewedAt: new Date().toISOString()
     };
     this.reviews.unshift(newReview);
+    this.persist();
     return newReview;
   }
 }

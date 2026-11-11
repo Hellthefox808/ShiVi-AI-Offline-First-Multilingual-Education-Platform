@@ -23,7 +23,33 @@ describe('BhashaSetu Web Backend — High-Concurrency Stress & Circuit Breaker R
       assert.equal(status.endpoints[0], 'http://127.0.0.1:8000');
       assert.equal(status.endpoints[1], 'http://127.0.0.1:8001');
       assert.equal(status.endpoints[2], 'http://127.0.0.1:8002');
-      assert.equal(status.loadBalancerMode, 'ROUND_ROBIN_FAILOVER');
+      assert.equal(status.loadBalancerMode, 'HYBRID');
+      // Per-endpoint health must be reported so failover is observable, not just claimed
+      assert.equal(status.endpointHealth.length, 3);
+      assert.ok(status.endpointHealth.every((e: any) => e.healthy === true));
+      assert.ok(status.endpointHealth.every((e: any) => e.consecutiveFailures === 0));
+    });
+
+    it('should mark an endpoint unhealthy after repeated failures instead of only rotating blindly', async () => {
+      const endpoints = process.env.AI_PLATFORM_URL!.split(',').map((u) => u.trim());
+      const victim = endpoints[0];
+
+      // Drive enough failures so the round-robin must skip this endpoint
+      for (let i = 0; i < 6; i++) {
+        await aiClient.generateLesson({
+          hindiPrompt: `हैल्थ फेल ${i}`,
+          targetLanguage: 'SANTHALI',
+          gradeLevel: 'GRADE_2',
+        });
+      }
+
+      const status = aiClient.getCircuitBreakerStatus();
+      const victimHealth = status.endpointHealth.find((e: any) => e.url === victim);
+      assert.ok(victimHealth, 'reported endpoint health must include the probed endpoint');
+      assert.ok(
+        victimHealth!.consecutiveFailures > 0,
+        'endpoint must accumulate failure counts when it rejects traffic'
+      );
     });
 
     it('should trip circuit breaker to OPEN after failure threshold and provide fast fallback', async () => {

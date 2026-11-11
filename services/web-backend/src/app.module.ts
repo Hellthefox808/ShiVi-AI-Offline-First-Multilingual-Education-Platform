@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PersistenceModule } from './common/persistence.module';
 import { AuthModule } from './auth/auth.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
 import { LessonsModule } from './lessons/lessons.module';
@@ -14,6 +15,7 @@ import { AiClientModule } from './ai-client/ai-client.module';
 
 @Module({
   imports: [
+    PersistenceModule,
     AuthModule,
     CurriculumModule,
     LessonsModule,

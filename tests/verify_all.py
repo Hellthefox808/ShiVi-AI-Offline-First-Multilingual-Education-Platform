@@ -25,6 +25,12 @@ if hasattr(sys.stdout, 'reconfigure'):
 # Add services/ai-platform to sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'services', 'ai-platform'))
 
+# Defense: the developer's Anaconda site-packages can prepend unrelated project
+# directories (e.g. Ransomware-Detection, Road-Detection) whose own `main.py`
+# shadows the AI Platform module. Filter them out before importing so CI is
+# reproducible on any workstation.
+sys.path = [p for p in sys.path if 'Ransomware-Detection' not in p and 'Road-Detection' not in p]
+
 from rag.engine import rag_engine, JCERT_KNOWLEDGE_BASE
 from translation.providers import language_provider, TRIBAL_LEXICON
 from pedagogy.adapter import pedagogical_adapter

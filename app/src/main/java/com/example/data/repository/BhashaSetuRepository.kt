@@ -644,7 +644,7 @@ class BhashaSetuRepository(private val context: Context) {
                "targetText": "student original or normalized tribal phrase in ${targetLanguage.displayName}",
                "scriptText": "native script text (Ol Chiki/Warang Chiti/Devanagari)",
                "transliteration": "Roman pronunciation",
-               "transliterationDevanagari": "Hindi comprehension translation for teacher",
+               "transliterationDevanagari": "Hindi comprehension translation for teacher, written in Devanagari",
                "syllables": ["list", "of", "phonetic", "syllables"]
             }
             """.trimIndent()
@@ -709,7 +709,10 @@ class BhashaSetuRepository(private val context: Context) {
                         transliterationDevanagari = obj.optString("transliterationDevanagari", "")
                         val sylArr = obj.optJSONArray("syllables")
                         if (sylArr != null && sylArr.length() > 0) {
-                            phoneticSyllables = (0 until sylArr.length()).map { sylArr.getString(it) }
+                            phoneticSyllables = (0 until sylArr.length())
+                                .map { sylArr.optString(it, "").trim() }
+                                .filter { it.isNotBlank() }
+                                .take(8)
                         }
                     } catch (e: Exception) {
                         targetTranslation = raw
@@ -740,12 +743,16 @@ class BhashaSetuRepository(private val context: Context) {
             phoneticSyllables = fallback.phoneticSyllables
         }
 
-        if (transliterationDevanagari.isBlank()) {
+        // Offline-first invariant: every field the classroom UI renders must be populated.
+        // A partial remote response (e.g. JSON without transliterationDevanagari) would otherwise
+        // leave TTS with nothing to speak and FLN practice with no syllables.
+        if (transliterationDevanagari.isBlank() || phoneticSyllables.isEmpty() || targetTranslation.isBlank()) {
             val fallback = OfflineVoiceTranslationEngine.translate(hindiSpeechText, targetLanguage, speakerRole)
-            transliterationDevanagari = fallback.transliterationDevanagari
-            if (phoneticSyllables.isEmpty()) {
-                phoneticSyllables = fallback.phoneticSyllables
-            }
+            if (transliterationDevanagari.isBlank()) transliterationDevanagari = fallback.transliterationDevanagari
+            if (transliteration.isBlank()) transliteration = fallback.transliteration
+            if (targetTranslation.isBlank()) targetTranslation = fallback.targetText
+            if (scriptText.isBlank()) scriptText = fallback.scriptText
+            if (phoneticSyllables.isEmpty()) phoneticSyllables = fallback.phoneticSyllables
         }
 
         val latency = System.currentTimeMillis() - startTime

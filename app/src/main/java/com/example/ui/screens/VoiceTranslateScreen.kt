@@ -1046,7 +1046,7 @@ fun VoiceTurnBubble(
     val isBilingualSpeaking = isSpeaking && (currentUtteranceId?.startsWith("relay_${turn.id}") == true)
     val isHindiSpeaking = isSpeaking && (currentUtteranceId == "hi_${turn.id}")
     val isThisTurnSpeaking = isTribalSpeaking || isBilingualSpeaking || isHindiSpeaking
-    val isStudentTurn = turn.speakerRole == VoiceSpeakerRole.STUDENT || !turn.isTeacher
+    val isStudentTurn = turn.speakerRole == VoiceSpeakerRole.STUDENT
 
     GlassmorphicCard(
         shape = RoundedCornerShape(20.dp),

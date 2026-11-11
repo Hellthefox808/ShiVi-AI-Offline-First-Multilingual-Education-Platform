@@ -19,6 +19,7 @@ from pedagogy.adapter import pedagogical_adapter
 from quality.evaluator import quality_evaluator
 from voice.service import voice_pipeline
 from voice.streaming_agent import RealtimeVoiceSession, VoiceAgentConfig, AgentState
+from voice.pronunciation import pronunciation_engine
 from pipeline import unified_pipeline
 
 app = FastAPI(
@@ -319,30 +320,55 @@ def generate_lesson(req: LessonGenerateRequest):
 @app.post("/api/v1/voice/translate")
 @app.post("/api/v1/ai/voice/translate")
 @app.post("/api/v1/voice/two-way")
+@app.post("/api/v1/ai/voice/two-way")
 def live_voice_translate(req: VoiceTranslateRequest):
     speaker_role = (req.speaker_role or "TEACHER").upper()
-    text = (
-        req.transcript 
-        or req.student_tribal_transcript 
-        or req.transcription_hindi 
-        or req.hindi_transcript 
-        or ("बच्चों, अपनी किताब खोलो" if speaker_role == "TEACHER" else "ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ!")
-    )
-    rate = req.speech_rate if req.speech_rate is not None else (0.72 if req.fln_mode is not False else 1.0)
+    # `or`-chaining treated an empty string as "absent" and fell through, and the client-supplied
+    # student tribal transcript was mapped to a field holding non-tribal text. Select explicitly.
+    if speaker_role == "STUDENT":
+        text = (
+            req.student_tribal_transcript
+            or req.transcript
+            or req.transcription_hindi
+            or req.hindi_transcript
+            or "ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ!"
+        )
+    else:
+        text = (
+            req.hindi_transcript
+            or req.transcription_hindi
+            or req.transcript
+            or "बच्चों, अपनी किताब खोलो"
+        )
+    # FLN 0.72x is the default foundational pace; an explicit speech_rate always wins.
+    if req.speech_rate is not None:
+        rate = req.speech_rate
+    else:
+        rate = 0.72 if (req.fln_mode is not False) else 1.0
     pause_ms = req.relay_pause_ms if req.relay_pause_ms is not None else 450
     pitch_val = req.pitch if req.pitch is not None else 1.0
     timbre_val = req.voice_timbre or "CLEAR_EDUCATIONAL"
 
-    result = voice_pipeline.process_voice_turn(
-        hindi_transcript=text,
-        target_lang=req.target_language,
-        speaker_role=speaker_role,
-        speech_rate=rate,
-        pitch=pitch_val,
-        voice_timbre=timbre_val,
-        relay_pause_ms=pause_ms
-    )
-    
+    # Defensive: a local variable here would make `text` an unbound free variable inside the
+    # nested `except` below, raising UnboundLocalError on the error path itself.
+    result: Optional[Dict[str, Any]] = None
+    try:
+        result = voice_pipeline.process_voice_turn(
+            hindi_transcript=text,
+            target_lang=req.target_language,
+            speaker_role=speaker_role,
+            speech_rate=rate,
+            pitch=pitch_val,
+            voice_timbre=timbre_val,
+            relay_pause_ms=pause_ms,
+            fln_mode=req.fln_mode if req.fln_mode is not None else True
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Voice translation pipeline failed: {type(exc).__name__}: {exc}"
+        )
+
     # Enrich with bilingual relay and fln specs
     result["turn_id"] = f"VOICE-{uuid.uuid4().hex[:6].upper()}"
     result["speech_rate"] = rate
@@ -367,6 +393,183 @@ class VoiceSessionRequest(BaseModel):
     pitch: float = Field(default=1.0, examples=[1.0])
     speech_rate: float = Field(default=0.92, examples=[0.92])
     relay_pause_ms: int = Field(default=450, examples=[450])
+
+
+class PronunciationScoreRequest(BaseModel):
+    """Scores a single child's spoken attempt against a reference tribal phrase."""
+    reference_text: str = Field(..., examples=["ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ"])
+    spoken_transcript: str = Field(..., examples=["ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ"])
+    target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
+    reference_devanagari: Optional[str] = Field(default=None, examples=["जोहार गिदरा को"])
+    spoken_duration_ms: Optional[int] = Field(default=None, examples=[4200])
+    student_id: Optional[str] = Field(default=None, examples=["STU-001"])
+
+
+class PronunciationBatchRequest(BaseModel):
+    """Scores a whole classroom's attempts in one call for offline teacher review."""
+    target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
+    attempts: List[Dict[str, Any]] = Field(
+        ...,
+        examples=[[{"student_id": "STU-001", "reference_text": "ᱡᱚᱦᱟᱨ", "spoken_transcript": "ᱡᱚᱦᱟᱨ"}]],
+    )
+
+
+class VoiceBatchTranslateRequest(BaseModel):
+    """High-throughput batch voice translation for pre-recorded classroom audio."""
+    transcripts: List[str] = Field(..., examples=[["नमस्ते बच्चों", "किताब खोलो"]])
+    target_language: str = Field(default="SANTHALI", examples=["SANTHALI"])
+    speaker_role: str = Field(default="TEACHER", examples=["TEACHER", "STUDENT"])
+    fln_mode: Optional[bool] = Field(default=True)
+    bilingual_relay: Optional[bool] = Field(default=True)
+    voice_timbre: Optional[str] = Field(default="CLEAR_EDUCATIONAL")
+    pitch: Optional[float] = Field(default=1.0)
+    speech_rate: Optional[float] = Field(default=None)
+    relay_pause_ms: Optional[int] = Field(default=450)
+
+
+@app.post("/api/v1/voice/pronunciation/score")
+@app.post("/api/v1/ai/voice/pronunciation/score")
+def score_pronunciation(req: PronunciationScoreRequest):
+    """
+    Scores a child's spoken tribal attempt for FLN practice.
+
+    Returns word-level accuracy, syllable drill-down, oral reading fluency against
+    NIPUN Bharat benchmarks, and Devanagari remediation guidance for the teacher.
+    """
+    try:
+        return pronunciation_engine.score_attempt(
+            reference_text=req.reference_text,
+            spoken_transcript=req.spoken_transcript,
+            target_language=req.target_language,
+            reference_devanagari=req.reference_devanagari,
+            spoken_duration_ms=req.spoken_duration_ms,
+            student_id=req.student_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.post("/api/v1/voice/pronunciation/batch")
+def score_pronunciation_batch(req: PronunciationBatchRequest):
+    """Scores a whole classroom's attempts in one call for offline teacher review."""
+    return pronunciation_engine.score_batch(req.attempts, target_language=req.target_language)
+
+
+@app.post("/api/v1/voice/translate/batch")
+@app.post("/api/v1/ai/voice/translate/batch")
+def batch_voice_translate(req: VoiceBatchTranslateRequest):
+    """
+    Translates many spoken utterances in a single request.
+
+    Intended for pre-recorded classroom audio pushed when a tablet regains
+    connectivity, so a teacher does not issue one HTTP round-trip per sentence
+    across a slow 2G link.
+    """
+    speaker_role = (req.speaker_role or "TEACHER").upper()
+    if req.speech_rate is not None:
+        rate = req.speech_rate
+    else:
+        rate = 0.72 if (req.fln_mode is not False) else 1.0
+
+    results = []
+    for idx, transcript in enumerate(req.transcripts):
+        if not transcript or not transcript.strip():
+            results.append({
+                "index": idx,
+                "source_transcript": transcript,
+                "error": "EMPTY_TRANSCRIPT",
+                "message": "Batch entry was blank and was not translated",
+            })
+            continue
+        try:
+            turn = voice_pipeline.process_voice_turn(
+                hindi_transcript=transcript,
+                target_lang=req.target_language,
+                speaker_role=speaker_role,
+                speech_rate=rate,
+                pitch=req.pitch if req.pitch is not None else 1.0,
+                voice_timbre=req.voice_timbre or "CLEAR_EDUCATIONAL",
+                relay_pause_ms=req.relay_pause_ms if req.relay_pause_ms is not None else 450,
+                fln_mode=req.fln_mode if req.fln_mode is not None else True,
+            )
+            turn["index"] = idx
+            turn["turn_id"] = f"VOICE-{uuid.uuid4().hex[:6].upper()}"
+            turn["speech_rate"] = rate
+            turn["acoustic_engine"] = "hi-IN"
+            turn["bilingual_relay"] = {
+                "enabled": req.bilingual_relay is not False and speaker_role == "TEACHER",
+                "source_audio_pause_ms": req.relay_pause_ms if req.relay_pause_ms is not None else 450,
+                "relay_sequence": (
+                    ["SOURCE_HINDI", f"PAUSE_{req.relay_pause_ms or 450}MS", "TRIBAL_PHONETIC_HI_IN"]
+                    if speaker_role == "TEACHER"
+                    else ["TRIBAL_SOURCE", f"PAUSE_{req.relay_pause_ms or 450}MS", "HINDI_COMPREHENSION"]
+                ),
+            }
+            results.append(turn)
+        except Exception as exc:
+            results.append({
+                "index": idx,
+                "source_transcript": transcript,
+                "error": f"TRANSLATION_FAILED: {type(exc).__name__}",
+                "message": str(exc),
+            })
+
+    succeeded = [r for r in results if "error" not in r]
+    return {
+        "target_language": req.target_language,
+        "speaker_role": speaker_role,
+        "speech_rate": rate,
+        "count": len(results),
+        "succeeded": len(succeeded),
+        "failed": len(results) - len(succeeded),
+        "results": results,
+    }
+
+
+@app.get("/api/v1/voice/capabilities")
+def get_voice_capabilities():
+    """
+    Declares exactly which voice features this deployment can actually serve.
+
+    Exists so clients degrade gracefully instead of optimistically calling an
+    endpoint that is not backed here.
+    """
+    return {
+        "supported_languages": ["SANTHALI", "HO", "MUNDARI"],
+        "speaker_roles": ["TEACHER", "STUDENT"],
+        "voice_timbres": list(voice_pipeline.TIMBRE_PROFILES.keys()),
+        "sample_rate_hz": 24000,
+        "audio_formats": ["pcm16", "mp3"],
+        "acoustic_engine": "hi-IN",
+        "features": {
+            "voice_translate": True,
+            "voice_translate_batch": True,
+            "two_way_dialogue": True,
+            "pronunciation_scoring": True,
+            "pronunciation_batch": True,
+            "bilingual_relay": True,
+            "fln_slow_mode": True,
+            "barge_in_interruption": True,
+            "websocket_streaming": True,
+            "webrtc_signalling": True,
+            "livekit_tokens": True,
+        },
+        "limitations": {
+            "tribal_acoustic_model": False,
+            "pronunciation_scoring_mode": "linguistic_transcript_match",
+            "note": (
+                "No tribal-language acoustic model is deployed. Pronunciation scores are "
+                "computed from the ASR transcript, not from acoustic similarity, and are "
+                "labelled as such in every response."
+            ),
+        },
+        "fln_defaults": {
+            "speech_rate": 0.72,
+            "relay_pause_ms": 450,
+            "nipun_bharat_target_wpm": pronunciation_engine.FLN_WPM_TARGET,
+        },
+    }
+
 
 @app.post("/api/v1/voice/session")
 def create_voice_session(req: VoiceSessionRequest):
@@ -473,7 +676,7 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
     await websocket.accept()
     session_id = session_id or f"sess_{uuid.uuid4().hex[:12]}"
     session = RealtimeVoiceSession(session_id=session_id)
-    
+
     # Send initial session created event
     await websocket.send_json({
         "type": "session.created",
@@ -494,12 +697,12 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
             }
         }
     })
-    
+
     try:
         while True:
             data = await websocket.receive_json()
             msg_type = data.get("type")
-            
+
             if msg_type == "session.update":
                 sess_data = data.get("session", {})
                 if "target_language" in sess_data:
@@ -531,15 +734,31 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
                         "relay_pause_ms": session.config.relay_pause_ms
                     }
                 })
-                
+
             elif msg_type == "input_audio_buffer.append":
                 b64_audio = data.get("audio", "")
                 client_sample_rate = data.get("sample_rate")
                 if b64_audio:
-                    pcm_bytes = base64.b64decode(b64_audio)
-                    events = await session.handle_audio_frame(pcm_bytes, client_sample_rate=client_sample_rate)
-                    for event in events:
-                        await websocket.send_json(event)
+                    try:
+                        pcm_bytes = base64.b64decode(b64_audio, validate=True)
+                    except Exception:
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "INVALID_AUDIO_ENCODING",
+                            "message": "input_audio_buffer.append payload is not valid base64 PCM16"
+                        })
+                        continue
+                    try:
+                        events = await session.handle_audio_frame(pcm_bytes, client_sample_rate=client_sample_rate)
+                        for event in events:
+                            await websocket.send_json(event)
+                    except Exception as frame_exc:
+                        # Keep the socket alive while reporting the frame failure.
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "AUDIO_FRAME_ERROR",
+                            "message": f"{type(frame_exc).__name__}: {frame_exc}"
+                        })
 
             elif msg_type == "input_audio_buffer.clear":
                 session.clear_input_buffer()
@@ -548,21 +767,30 @@ async def voice_streaming_endpoint(websocket: WebSocket, session_id: Optional[st
                     "session_id": session.session_id,
                     "timestamp_ms": int(time.time() * 1000)
                 })
-                        
+
             elif msg_type == "input_audio_buffer.commit":
                 fallback = data.get("transcript")
                 async for resp_event in session.commit_and_process(fallback_text=fallback):
                     await websocket.send_json(resp_event)
-                    
+
             elif msg_type == "response.cancel":
                 event = await session.interrupt()
                 await websocket.send_json(event)
-                
+
+            else:
+                # Unknown event types previously fell through silently, leaving clients waiting
+                # on a reply that never arrived.
+                await websocket.send_json({
+                    "type": "error",
+                    "code": "UNKNOWN_EVENT_TYPE",
+                    "message": f"Unsupported event type: {msg_type}"
+                })
+
     except WebSocketDisconnect:
         pass
     except Exception as e:
         try:
-            await websocket.send_json({"type": "error", "message": str(e)})
+            await websocket.send_json({"type": "error", "code": "SESSION_ERROR", "message": str(e)})
         except Exception:
             pass
 

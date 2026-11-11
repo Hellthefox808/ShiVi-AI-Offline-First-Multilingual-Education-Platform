@@ -311,5 +311,120 @@ class VoiceTranslationTest {
         val ragMundari = OfflineVoiceTranslationEngine.retrieveRagGlossaryContext(speech, TargetLanguage.MUNDARI)
         assertTrue("RAG must contain verified Mundari terms", ragMundari.contains("पानी"))
     }
+
+    /**
+     * Regression: LEXICON previously declared the key "दो" twice — once as the verb
+     * "give" (ᱮᱢ ᱢᱮ) and once as the numeral "two" (ᱵᱟᱨ). A Kotlin mapOf literal
+     * silently drops the earlier binding, so every occurrence of "दो" resolved to
+     * the GIVE verb, corrupting all counting and giving/answering phrases.
+     */
+    @Test
+    fun testLexicon_numeralDho_resolvesToTwoNotGiveVerb() {
+        val context = OfflineVoiceTranslationEngine.retrieveRagGlossaryContext("एक दो तीन", TargetLanguage.SANTHALI)
+        assertTrue("Numeral 'दो' must map to ᱵᱟᱨ (two), not ᱮᱢ ᱢᱮ (give)", context.contains("ᱵᱟᱨ"))
+        assertFalse("Numeral 'दो' must NOT resolve to the GIVE verb sense", context.contains("ᱮᱢ ᱢᱮ"))
+    }
+
+    /**
+     * Regression: the QA category matched on `उत्तर` + `दो`, so ordinary praise such as
+     * "बहुत अच्छा उत्तर दो" / "सही उत्तर दो" hijacked the category and was answered with
+     * the static "who knows the answer?" choral prompt instead of encouragement.
+     */
+    @Test
+    fun testTeacherMode_encouragementWithAnswerIsNotHijackedByQaCategory() {
+        val praise = OfflineVoiceTranslationEngine.translate(
+            inputText = "बहुत अच्छा उत्तर दो",
+            targetLanguage = TargetLanguage.SANTHALI,
+            speakerRole = VoiceSpeakerRole.TEACHER
+        )
+        assertFalse(
+            "Praise phrase must NOT trigger the static 'who knows?' QA prompt",
+            praise.targetText.contains("ᱚᱠᱚᱭ ᱵᱟᱰᱟᱭᱟ ᱛᱮᱞᱟ")
+        )
+        assertTrue(
+            "Praise phrase must reach the encouragement category",
+            praise.targetText.contains("ᱥᱟᱨᱦᱟᱣ") || praise.targetText.contains("ᱱᱟᱯᱟᱭ")
+        )
+
+        // The genuine asking-an-answer instruction must still route to the QA category
+        val genuine = OfflineVoiceTranslationEngine.translate(
+            inputText = "उत्तर दो",
+            targetLanguage = TargetLanguage.SANTHALI,
+            speakerRole = VoiceSpeakerRole.TEACHER
+        )
+        assertTrue("Genuine 'उत्तर दो' must still hit the QA category", genuine.targetText.contains("ᱛᱮᱞᱟ"))
+    }
+
+    /**
+     * Regression: syllable generation used String.chunked(2), slicing Devanagari
+     * by UTF-16 code unit and cutting matras off their base consonant. FLN chips
+     * rendered as unpronounceable fragments like "ङा" or a lone "़".
+     */
+    /**
+     * Regression: VoiceTurn previously declared
+     *   `speakerRole: VoiceSpeakerRole = if (isTeacher) TEACHER else STUDENT`
+     * where `speakerRole` is itself declared AFTER `isTeacher`. Kotlin resolves
+     * default-argument expressions against the constructor parameter scope, so the
+     * reference bound to `isTeacher`'s own default (true) — meaning the parameter default
+     * could NEVER yield STUDENT, and the call was self-referential at best. Combined with
+     * `isTeacher: Boolean = true`, omitting both for a student turn silently produced a
+     * TEACHER-labelled turn.
+     *
+     * The correct contract: `speakerRole` is required, and any explicitly passed
+     * `isTeacher` is what callers actually read back.
+     */
+    @Test
+    fun testVoiceTurn_speakerRoleIsRequiredAndConsistentWithIsTeacher() {
+        // Student turn: both flags must agree
+        val studentTurn = VoiceTurn(
+            id = "t_student",
+            isTeacher = false,
+            speakerRole = VoiceSpeakerRole.STUDENT,
+            hindiText = "मुझे पानी चाहिए",
+            targetText = "ᱫᱟᱜ",
+            scriptText = "Ol Chiki (ᱚᱞ ᱪᱤᱠᱤ)",
+            transliteration = "Dak",
+            transliterationDevanagari = "दाग",
+            latencyMs = 25L
+        )
+        assertFalse("Student turn must report isTeacher=false", studentTurn.isTeacher)
+        assertEquals(VoiceSpeakerRole.STUDENT, studentTurn.speakerRole)
+
+        // Teacher turn reached through the real engine must stay consistent
+        val teacherTurn = OfflineVoiceTranslationEngine.translate(
+            inputText = "नमस्ते",
+            targetLanguage = TargetLanguage.SANTHALI,
+            speakerRole = VoiceSpeakerRole.TEACHER
+        )
+        assertTrue(teacherTurn.isTeacher)
+        assertEquals(VoiceSpeakerRole.TEACHER, teacherTurn.speakerRole)
+        assertNotEquals(
+            "isTeacher and speakerRole must never disagree",
+            teacherTurn.isTeacher,
+            teacherTurn.speakerRole == VoiceSpeakerRole.STUDENT
+        )
+    }
+
+    @Test
+    fun testPhoneticSyllables_neverOrphanCombiningMarks() {
+        val result = OfflineVoiceTranslationEngine.translate(
+            inputText = "नमस्ते बच्चों, आज हम पढ़ेंगे",
+            targetLanguage = TargetLanguage.MUNDARI,
+            speakerRole = VoiceSpeakerRole.TEACHER
+        )
+
+        assertTrue("Teacher turns must always expose FLN syllables", result.phoneticSyllables.isNotEmpty())
+        for (chip in result.phoneticSyllables) {
+            assertTrue("Syllable chip '$chip' must not be blank", chip.isNotBlank())
+            assertFalse("Syllable chip '$chip' must not be an empty fragment", chip.trim('-').isBlank())
+            // A chip must never begin with a combining sign (matra/virama/nukta) — that
+            // means it was cut away from the consonant it modifies.
+            val first = chip.first()
+            val startsWithCombining = first in '\u093E'..'\u094D' || first == '\u0901' ||
+                first == '\u0902' || first == '\u0903' || first == '\u093C' || first == '-'
+            assertFalse("Syllable chip '$chip' starts with an orphaned combining mark", startsWithCombining)
+        }
+    }
 }
+
 

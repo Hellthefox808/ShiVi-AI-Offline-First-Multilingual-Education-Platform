@@ -203,8 +203,8 @@ enum class VoiceSpeakerRole(val displayName: String, val iconEmoji: String) {
 
 data class VoiceTurn(
     val id: String,
-    val isTeacher: Boolean = true,
-    val speakerRole: VoiceSpeakerRole = if (isTeacher) VoiceSpeakerRole.TEACHER else VoiceSpeakerRole.STUDENT,
+    val isTeacher: Boolean = false,
+    val speakerRole: VoiceSpeakerRole,
     val hindiText: String,
     val targetText: String,
     val scriptText: String,

@@ -1,11 +1,40 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { AuthGuard } from './auth/auth.guard';
+import { TokenService } from './auth/token.service';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { RateLimitMiddleware } from './common/middleware/rate-limit.middleware';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
   app.setGlobalPrefix('api/v1');
+
+  // Correlation ID + rate limiting (first: every request gets an ID, then rate-limited).
+  const correlationIdMiddleware = new CorrelationIdMiddleware();
+  const rateLimitMiddleware = new RateLimitMiddleware();
+  app.use((req: Request, res: Response, next: NextFunction) => correlationIdMiddleware.use(req, res, next));
+  app.use((req: Request, res: Response, next: NextFunction) => rateLimitMiddleware.use(req, res, next));
+
+  // Global structured exception filter: every error response carries code, message,
+  // statusCode, timestamp, path, and requestId.
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Reject unknown properties and enforce DTO decorators from the voice/other controllers.
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transform: true,
+    }),
+  );
+
+  // Global auth + RBAC: every route requires a signed token unless annotated @Public().
+  app.useGlobalGuards(new AuthGuard(app.get(Reflector), app.get(TokenService)));
 
   // OpenAPI 3.1 Swagger Documentation Setup
   const config = new DocumentBuilder()

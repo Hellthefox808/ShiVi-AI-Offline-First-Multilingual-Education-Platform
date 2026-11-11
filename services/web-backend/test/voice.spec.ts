@@ -64,4 +64,53 @@ describe('BhashaSetu Voice Relay & Phonetic Synthesis', () => {
     assert.equal(result.speech_rate, 1.0);
     assert.equal(result.bilingual_relay.enabled, false);
   });
+
+  it('should render a two-way STUDENT turn as Hindi comprehension, not teacher enunciation', async () => {
+    // The local fallback previously ignored speakerRole entirely, so a student's mother-tongue
+    // utterance came back as the teacher's Devanagari enunciation of the source text.
+    const studentResult = await aiClientService.translateTwoWayVoiceTurn({
+      studentTribalTranscript: 'ᱡᱚᱦᱟᱨ ᱢᱟᱪᱮᱛ ᱜᱚᱢᱠᱮ',
+      targetLanguage: 'SANTHALI',
+      speakerRole: 'STUDENT',
+    });
+
+    assert.equal(studentResult.speaker_role, 'STUDENT');
+    assert.equal(studentResult.direction, 'TRIBAL_TO_HINDI');
+    assert.equal(studentResult.script_type, 'DEVANAGARI');
+    assert.ok(
+      studentResult.transliteration_devanagari.includes('गुरुजी'),
+      'student turn must yield Hindi comprehension for the teacher'
+    );
+    assert.equal(studentResult.bilingual_relay.enabled, false);
+
+    // The teacher branch must remain an OL_CHIKI relay for the same endpoint
+    const teacherResult = await aiClientService.translateTwoWayVoiceTurn({
+      hindiTranscript: 'बच्चों, किताब खोलो',
+      targetLanguage: 'SANTHALI',
+      speakerRole: 'TEACHER',
+    });
+
+    assert.equal(teacherResult.speaker_role, 'TEACHER');
+    assert.equal(teacherResult.direction, 'HINDI_TO_TRIBAL');
+    assert.equal(teacherResult.script_type, 'OL_CHIKI');
+    assert.equal(teacherResult.bilingual_relay.enabled, true);
+    assert.ok(teacherResult.source_transcript.length > 0);
+  });
+
+  it('should keep FLN 0.72x default for two-way turns and honour an explicit rate', async () => {
+    const flnDefault = await aiClientService.translateTwoWayVoiceTurn({
+      hindiTranscript: 'नमस्ते बच्चों',
+      targetLanguage: 'HO',
+      speakerRole: 'TEACHER',
+    });
+    assert.equal(flnDefault.speech_rate, 0.72);
+
+    const explicit = await aiClientService.translateTwoWayVoiceTurn({
+      hindiTranscript: 'नमस्ते बच्चों',
+      targetLanguage: 'HO',
+      speakerRole: 'TEACHER',
+      speechRate: 1.2,
+    });
+    assert.equal(explicit.speech_rate, 1.2, 'an explicit speech rate must not be overridden by FLN default');
+  });
 });

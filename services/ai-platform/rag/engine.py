@@ -7,6 +7,7 @@ Preloaded with 15 Comprehensive JCERT Grades 1-5 Primary Curriculum Chunks with 
 
 from typing import List, Dict, Any, Optional, Set, Tuple
 from collections import OrderedDict
+import hashlib
 import math
 import re
 
@@ -428,13 +429,13 @@ class FineTunedHybridRagEngine:
         self.doc_tokens = []
         self.doc_lengths = []
         self.doc_freqs: Dict[str, int] = {}
-        
+
         for doc in self.corpus:
             combined_text = f"{doc['topic']} {doc['chapter_title']} {doc['content_hindi']} {' '.join(doc['cultural_keywords'])} {doc['lo_code']} {doc.get('district', '')} {doc.get('competency_category', '')}"
             tokens = self._tokenize(combined_text)
             self.doc_tokens.append(tokens)
             self.doc_lengths.append(len(tokens))
-            
+
             unique_tokens = set(tokens)
             for token in unique_tokens:
                 self.doc_freqs[token] = self.doc_freqs.get(token, 0) + 1
@@ -460,7 +461,7 @@ class FineTunedHybridRagEngine:
                 continue
             df = self.doc_freqs[q_token]
             idf = math.log(1.0 + (self.num_docs - df + 0.5) / (df + 0.5))
-            
+
             tf = token_counts.get(q_token, 0)
             numerator = tf * (self.k1 + 1.0)
             denominator = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / self.avg_doc_len))
@@ -483,9 +484,13 @@ class FineTunedHybridRagEngine:
                     slot = (base_slot + offset) % self.vector_dim
                     vector[slot] += weight * (1.0 / (offset + 1))
 
-        # Subword n-gram hashing
+        # Subword n-gram hashing.
+        # Python's built-in hash() is salted per-process for str (PYTHONHASHSEED), so the same
+        # text produced DIFFERENT vectors across interpreter runs and across worker processes.
+        # Retrieval order was therefore not reproducible, and two workers in a load-balanced
+        # pool could disagree on the same query. Use a stable digest instead.
         for t in tokens:
-            h = abs(hash(t)) % self.vector_dim
+            h = int.from_bytes(hashlib.blake2b(t.encode('utf-8'), digest_size=8).digest(), 'big') % self.vector_dim
             vector[h] += 0.35
 
         # L2 Normalization

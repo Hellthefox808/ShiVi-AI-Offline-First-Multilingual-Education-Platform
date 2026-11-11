@@ -1,12 +1,32 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { Lesson, LessonStatus, Worksheet, Flashcard, TargetLanguage } from '@bhashasetu/contracts';
 import { AiClientService } from '../ai-client/ai-client.service';
+import { PersistenceService } from '../common/persistence.service';
+
+/** Legal transitions of the lesson lifecycle state machine. */
+export const LESSON_TRANSITIONS: Record<LessonStatus, LessonStatus[]> = {
+  DRAFT: ['GENERATING', 'REVIEW_REQUIRED'],
+  GENERATING: ['REVIEW_REQUIRED', 'DRAFT'],
+  REVIEW_REQUIRED: ['APPROVED', 'DRAFT'],
+  APPROVED: ['PUBLISHED', 'REVIEW_REQUIRED'],
+  PUBLISHED: ['ARCHIVED'],
+  // ARCHIVED is terminal: archived state curriculum material is never resurrected.
+  ARCHIVED: [],
+};
 
 @Injectable()
 export class LessonsService {
-  constructor(@Optional() private readonly aiClientService?: AiClientService) {}
+  constructor(
+    @Optional() private readonly aiClientService?: AiClientService,
+    @Optional() private readonly persistence?: PersistenceService,
+  ) {}
 
-  private lessons: Lesson[] = [
+  private readonly COLLECTION = 'lessons';
+
+  private memoryFallback: Lesson[] | null = null;
+
+  private seed(): Lesson[] {
+    return [
     {
       id: 'LES-001',
       schoolId: 'SCH-DUMKA-042',
@@ -40,7 +60,23 @@ export class LessonsService {
       createdAt: '2026-08-25T10:00:00.000Z',
       updatedAt: '2026-08-25T10:30:00.000Z'
     }
-  ];
+    ];
+  }
+
+  private get lessons(): Lesson[] {
+    if (!this.persistence) {
+      // No persistence injected (unit tests): retain in-memory behaviour.
+      if (!this.memoryFallback) this.memoryFallback = this.seed();
+      return this.memoryFallback;
+    }
+    return this.persistence.read<Lesson[]>(this.COLLECTION, this.seed());
+  }
+
+  private persist(): void {
+    if (this.persistence) {
+      this.persistence.write(this.COLLECTION, this.lessons);
+    }
+  }
 
   findAll(): Lesson[] {
     return this.lessons;
@@ -90,6 +126,7 @@ export class LessonsService {
     };
 
     this.lessons.unshift(newLesson);
+    this.persist();
     return newLesson;
   }
 
@@ -140,19 +177,42 @@ export class LessonsService {
     return created;
   }
 
+  private transition(lesson: Lesson, next: LessonStatus): Lesson {
+    const allowed = LESSON_TRANSITIONS[lesson.status] ?? [];
+    if (!allowed.includes(next) && lesson.status !== next) {
+      throw new BadRequestException(
+        `Illegal lesson transition ${lesson.status} -> ${next}. Allowed from ${lesson.status}: [${allowed.join(', ') || 'none'}]`
+      );
+    }
+    lesson.status = next;
+    lesson.updatedAt = new Date().toISOString();
+    this.persist();
+    return lesson;
+  }
+
   approve(id: string): Lesson {
     const lesson = this.findOne(id);
-    lesson.status = 'APPROVED';
-    lesson.isApprovedByTeacher = true;
-    lesson.updatedAt = new Date().toISOString();
-    return lesson;
+    const approved = this.transition(lesson, 'APPROVED');
+    approved.isApprovedByTeacher = true;
+    this.persist();
+    return approved;
   }
 
   publish(id: string): Lesson {
     const lesson = this.findOne(id);
-    lesson.status = 'PUBLISHED';
-    lesson.updatedAt = new Date().toISOString();
-    return lesson;
+    // Publishing is the point of no return for state curriculum distribution; it must
+    // not be reachable from DRAFT/REVIEW_REQUIRED without teacher approval.
+    if (!lesson.isApprovedByTeacher) {
+      throw new BadRequestException(
+        `Lesson ${id} cannot be published: it has not been approved by a teacher (status=${lesson.status})`
+      );
+    }
+    return this.transition(lesson, 'PUBLISHED');
+  }
+
+  archive(id: string): Lesson {
+    const lesson = this.findOne(id);
+    return this.transition(lesson, 'ARCHIVED');
   }
 
   getWorksheet(id: string): Worksheet {

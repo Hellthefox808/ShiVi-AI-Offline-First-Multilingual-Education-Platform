@@ -190,7 +190,6 @@ object OfflineVoiceTranslationEngine {
         "खड़े" to TribalTerm("ᱛᱤᱸᱜᱩ", "तिंगु", "Tingu", "ᱛᱤᱝᱜᱩ", "तिंगु", "Tingu", "तिंगु", "Tingu"),
         "सोना" to TribalTerm("ᱜᱤᱛᱤᱡ", "गितिच", "Gitij", "ᱜᱤᱛᱤᱡ", "गितिच", "Gitij", "गितिच", "Gitij"),
         "देना" to TribalTerm("ᱮᱢ", "एम", "Em", "ᱮᱢ", "एम", "Em", "एम", "Em"),
-        "दो" to TribalTerm("ᱮᱢ ᱢᱮ", "एम मे", "Em me", "ᱮᱢ ᱢᱮ", "एम मे", "Em me", "एम मे", "Em me"),
         "दीजिए" to TribalTerm("ᱮᱢ ᱯᱮ", "एम पे", "Em pe", "ᱮᱢ ᱯᱮ", "एम पे", "Em pe", "एम पे", "Em pe"),
         "लेना" to TribalTerm("ᱦᱟᱛᱟᱣ", "हाताओ", "Hataw", "ᱤᱫᱤ", "इदी", "Idi", "इदी", "Idi"),
         "लो" to TribalTerm("ᱦᱟᱛᱟᱣ ᱢᱮ", "हाताओ मे", "Hataw me", "ᱤᱫᱤ ᱢᱮ", "इदी मे", "Idi me", "इदी मे", "Idi me"),
@@ -255,6 +254,17 @@ object OfflineVoiceTranslationEngine {
         "लोग" to TribalTerm("ᱦᱚᱲ ᱠᱚ", "होड़ को", "Hor ko", "ᱦᱚᱲ ᱠᱚ", "होड़ को", "Hor ko", "होड़ को", "Hor ko"),
         "घर" to TribalTerm("ᱚᱲᱟᱜ", "ओड़ाग", "Orak'", "ᱚᱲᱟᱺ", "ओड़ाः", "Orah", "ओड़ाः", "Odah"),
         "गाँव" to TribalTerm("ᱟᱹᱛᱩ", "आतु", "Atu", "ᱦᱟᱹᱛᱩ", "हातु", "Hatu", "हातु", "Hatu"),
+
+        // Extended Classroom & Community
+        "शिक्षिका" to TribalTerm("ᱢᱟᱪᱮᱛ ᱵᱩᱰᱷᱤ", "माचेत बुढ़ी", "Machet budhi", "ᱤᱛᱩᱱᱤᱡ ᱵᱩᱰᱷᱤ", "ईतुनीज बुढ़ी", "Itunij budhi", "माचेत बुढ़ी", "Machet budhi"),
+        "प्रधानाध्यापक" to TribalTerm("ᱢᱟᱪᱮᱛ ᱠᱞᱮᱛ", "माचेत मोनेटा", "Machet moneta", "ᱤᱛᱩᱱᱤᱡ ᱥᱟᱸᱠ", "ईतून सिकाऊ", "Itun sikau", "प्रधान शिक्षक", "Pradhan shikshak"),
+        "सहपाठी" to TribalTerm("ᱜᱤᱫᱽᱨᱟᱹ ᱢᱟᱪᱮᱛ", "गिदरा माचेत", "Gidra machet", "ᱦᱚᱱ ᱤᱛᱩᱱᱤᱡ", "होन शिक्षा", "Hon siksha", "साथी पढ़ने वाला", "Sathi padhne wala"),
+        "पड़ोसी" to TribalTerm("ᱦᱚᱲ ᱠᱚ", "होड़ को", "Hor ko", "ᱡᱤᱭᱟᱨᱟ", "पड़ोसिया", "Padosia", "पड़ोसी", "Padosi"),
+        "गंगा" to TribalTerm("ᱜᱟᱰᱟ", "गाडा", "Gada", "ᱜᱟᱰᱟ", "गाडा", "Gada", "गंगा", "Ganga"),
+        "यमुना" to TribalTerm("ᱜᱟᱰᱟ", "गाडा", "Gada", "ᱜᱟᱰᱟ", "गाडा", "Gada", "यमुना", "Yamuna"),
+        "दामोदर" to TribalTerm("ᱜᱟᱰᱟ", "गाडा", "Gada", "ᱜᱟᱰᱟ", "गाडा", "Gada", "दामोदर", "Damodar"),
+        "सोन" to TribalTerm("ᱜᱟᱰᱟ", "गाडा", "Gada", "ᱜᱟᱰᱟ", "गाडा", "Gada", "सोन", "Son"),
+        "बarak" to TribalTerm("ᱛᱟᱸᱢᱩᱢ", "बड़ नदी", "Bada nadi", "ᱛᱟᱸᱢᱩᱢ", "बड़ नदी", "Bada nadi", "बड़ नदी", "Bada nadi"),
 
         // Nature, Water, Environment
         "पेड़" to TribalTerm("ᱫᱟᱨᱮ", "दारे", "Dare", "ᱫᱟᱨᱩ", "दारू", "Daru", "दारू", "Daru"),
@@ -803,7 +813,9 @@ object OfflineVoiceTranslationEngine {
             }
 
             // 13. Question & Answering (Who knows, ask questions)
-            lower.contains("हाथ उठा") || lower.contains("किसको पता") || (lower.contains("उत्तर") && lower.contains("दो")) || lower.contains("हाथ तूल") -> {
+            lower.contains("हाथ उठा") || lower.contains("हाथ उठाओ") || lower.contains("किसको पता") ||
+            lower.contains("उत्तर दो") || lower.contains("उत्तर दीजिए") || lower.contains("जवाब दो") ||
+            lower.contains("हाथ तूल") -> {
                 when (lang) {
                     TargetLanguage.SANTHALI -> VoiceTranslationResult(
                         targetText = "ᱚᱠᱚᱭ ᱵᱟᱰᱟᱭᱟ ᱛᱮᱞᱟ? ᱟᱯᱱᱟᱨ ᱛᱤ ᱛᱩᱞ ᱯᱮ᱾",
@@ -986,21 +998,77 @@ object OfflineVoiceTranslationEngine {
 
     /**
      * Generates hyphenated phonetic syllables for interactive FLN practice.
+     *
+     * Splits by phonemic units, not raw UTF-16 code units: vowel signs (matras), the
+     * virama (्), anusvara/visarga, and ZWJ/ZWNJ always bind to the consonant they
+     * modify, so a word is never cut between a consonant and its matra (which would
+     * emit a broken, unpronounceable chip such as "ा" or "ड").
      */
     private fun generatePhoneticSyllables(devaText: String): List<String> {
-        val cleanWords = devaText.replace(Regex("[।?!,.]"), "").trim().split(Regex("\\s+"))
+        val cleanWords = devaText.replace(Regex("[।?!,.]"), " ").trim().split(Regex("\\s+"))
         val syllables = mutableListOf<String>()
 
         for (word in cleanWords) {
             if (word.isBlank()) continue
-            if (word.length <= 3) {
+            val clusters = splitIntoPhoneticClusters(word)
+            if (clusters.size <= 1) {
+                // Short single-syllable word: emit as-is
                 syllables.add(word)
             } else {
-                val chunks = word.chunked(2)
-                syllables.add(chunks.joinToString("-"))
+                // Block stems onto the following vowel cluster so every chunk is pronounceable
+                val builder = StringBuilder()
+                var k = 0
+                while (k < clusters.size) {
+                    val isLast = k == clusters.lastIndex
+                    val clusterIsVowel = isVowelCluster(clusters[k])
+                    if (isLast) {
+                        builder.append(clusters[k])
+                    } else {
+                        val nextIsVowel = isVowelCluster(clusters[k + 1])
+                        if (!clusterIsVowel && nextIsVowel) {
+                            // Bind the consonant stem to its following vowel cluster
+                            builder.append(clusters[k]).append(clusters[k + 1])
+                            k++
+                        } else {
+                            builder.append(clusters[k])
+                        }
+                    }
+                    if (k < clusters.lastIndex) builder.append("-")
+                    k++
+                }
+                syllables.add(builder.toString().trim('-'))
             }
         }
-        return syllables.take(8).ifEmpty { listOf(devaText.take(6)) }
+        return syllables.filter { it.isNotBlank() && it != "-" }.take(8)
+            .ifEmpty { listOf(devaText.trim().take(6)) }
+    }
+
+    /** True when a phonetic cluster consists only of independent vowels or matras. */
+    private fun isVowelCluster(cluster: String): Boolean =
+        cluster.isNotEmpty() && cluster.all { ch ->
+            ch in '\u0904'..'\u0914' || ch in '\u093E'..'\u094C'
+        }
+
+    /**
+     * Splits a word into consonant/vowel clusters, binding dependent signs
+     * (matras, virama, anusvara, nukta, ZWJ/ZWNJ) to their base character.
+     */
+    private fun splitIntoPhoneticClusters(word: String): List<String> {
+        val clusters = mutableListOf<String>()
+        val current = StringBuilder()
+        for (ch in word) {
+            val isCombining = ch in '\u093E'..'\u094D' || ch == '\u0902' || ch == '\u0901' ||
+                ch == '\u0903' || ch == '\u093C' || ch == '\u200C' || ch == '\u200D'
+            if (isCombining && current.isNotEmpty()) {
+                current.append(ch)
+            } else {
+                if (current.isNotEmpty()) clusters.add(current.toString())
+                current.clear()
+                current.append(ch)
+            }
+        }
+        if (current.isNotEmpty()) clusters.add(current.toString())
+        return clusters
     }
 
     /**

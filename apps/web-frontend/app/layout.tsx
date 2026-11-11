@@ -22,8 +22,18 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${outfit.variable} dark`}>
+    <html lang="en" dir="ltr" className={`${jakarta.variable} ${outfit.variable} dark`}>
       <body className="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+        {/* Skip-to-content link for keyboard navigation */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-md focus:font-semibold"
+        >
+          Skip to main content
+        </a>
+        <main id="main-content" className="relative z-10 flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          {children}
+        </main>
         {/* Top Ambient Glow Gradient */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
           <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-emerald-600/15 via-teal-500/5 to-transparent blur-3xl opacity-80" />
@@ -81,11 +91,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </header>
-
-        {/* Main Workspace */}
-        <main className="relative z-10 flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-          {children}
-        </main>
 
         {/* Footer */}
         <footer className="relative z-10 bg-slate-900/90 border-t border-white/10 text-slate-400 text-xs py-4 px-6 text-center backdrop-blur-md">

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { HardwareState } from '@bhashasetu/contracts';
+import { PersistenceService } from '../common/persistence.service';
 
 export interface TabletDevice {
   deviceId: string;
@@ -19,7 +20,11 @@ export interface TabletDevice {
 
 @Injectable()
 export class DevicesService {
-  private devices: TabletDevice[] = [
+  constructor(@Optional() private readonly persistence?: PersistenceService) {}
+
+  private readonly COLLECTION = 'devices';
+
+  private readonly seedDevices: TabletDevice[] = [
     {
       deviceId: 'TAB-DUMKA-042-01',
       schoolId: 'SCH-DUMKA-042',
@@ -52,6 +57,22 @@ export class DevicesService {
     }
   ];
 
+  private memoryFallback: TabletDevice[] | null = null;
+
+  private get devices(): TabletDevice[] {
+    if (!this.persistence) {
+      if (!this.memoryFallback) this.memoryFallback = [...this.seedDevices];
+      return this.memoryFallback;
+    }
+    return this.persistence.read<TabletDevice[]>(this.COLLECTION, [...this.seedDevices]);
+  }
+
+  private persist(): void {
+    if (this.persistence) {
+      this.persistence.write(this.COLLECTION, this.devices);
+    }
+  }
+
   findAll(): TabletDevice[] {
     return this.devices;
   }
@@ -68,6 +89,7 @@ export class DevicesService {
     const existing = this.devices.find((d) => d.deviceId === payload.deviceId);
     if (existing) {
       Object.assign(existing, payload, { lastSyncTimestamp: new Date().toISOString() });
+      this.persist();
       return existing;
     }
     const newDevice: TabletDevice = {
@@ -86,12 +108,14 @@ export class DevicesService {
       offlineSyncBacklogCount: 0
     };
     this.devices.push(newDevice);
+    this.persist();
     return newDevice;
   }
 
   revoke(deviceId: string): TabletDevice {
     const device = this.findOne(deviceId);
     device.status = 'REVOKED';
+    this.persist();
     return device;
   }
 }

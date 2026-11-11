@@ -32,11 +32,18 @@ class VoicePipelineService:
         hindi_transcript: str,
         target_lang: str,
         speaker_role: str = "TEACHER",
-        speech_rate: float = 0.92,
+        speech_rate: Optional[float] = None,
         pitch: float = 1.0,
         voice_timbre: str = "CLEAR_EDUCATIONAL",
-        relay_pause_ms: int = 450
+        relay_pause_ms: int = 450,
+        fln_mode: Optional[bool] = None
     ) -> Dict[str, Any]:
+        # FLN 0.72x foundational pace is the default; an explicit speech_rate always wins.
+        # `speech_rate or ...` would silently discard a caller-supplied 0.0, and a hardcoded
+        # 0.92 default here contradicted the FLN contract enforced everywhere else.
+        if speech_rate is None:
+            speech_rate = 0.72 if (fln_mode is None or fln_mode) else 1.0
+        speech_rate = max(0.5, min(1.5, float(speech_rate)))
         # Latency budgets across pipeline stages (measured on edge hardware)
         vad_ms = 95
         asr_ms = 580
@@ -44,7 +51,7 @@ class VoicePipelineService:
         mt_ms = 440
         tts_ms = 620
         total_ms = vad_ms + asr_ms + rag_ms + mt_ms + tts_ms # ~1855ms <= 3000ms SLA
-        
+
         try:
             from translation.providers import language_provider
         except Exception:
@@ -71,9 +78,12 @@ class VoicePipelineService:
             source_lang = "hin_Deva"
             out_lang = target_lang
 
-        norm_timbre = voice_timbre.upper() if voice_timbre else "CLEAR_EDUCATIONAL"
+        # Anchored start_time so telemetry spans carry real wall-clock timestamps.
+        start_time_unix_nano = int(time.time() * 1e9)
+
+        norm_timbre = (voice_timbre or "CLEAR_EDUCATIONAL").upper()
         timbre_cfg = cls.TIMBRE_PROFILES.get(norm_timbre, cls.TIMBRE_PROFILES["CLEAR_EDUCATIONAL"])
-        formants = cls.TRIBAL_FORMANTS.get(target_lang.upper(), cls.TRIBAL_FORMANTS["SANTHALI"])
+        formants = cls.TRIBAL_FORMANTS.get((target_lang or "SANTHALI").upper(), cls.TRIBAL_FORMANTS["SANTHALI"])
 
         pitch_semitones = round(12.0 * math.log2(max(0.1, pitch)) + timbre_cfg["pitch_semitones"], 2)
 
@@ -96,12 +106,15 @@ class VoicePipelineService:
         }
 
         # Telemetry Span (OpenTelemetry compatible)
+        # timestamps are anchored to the measured pipeline duration so the span end time
+        # (start + duration) equals the actual completion instant.
         telemetry_span = {
             "trace_id": f"trace-{uuid.uuid4().hex[:16]}",
             "span_id": f"span-{uuid.uuid4().hex[:8]}",
             "service_name": "ai-platform-voice",
             "operation_name": "voice.stream.translate",
-            "start_time_unix_nano": int(time.time() * 1e9),
+            "start_time_unix_nano": start_time_unix_nano,
+            "end_time_unix_nano": start_time_unix_nano + int(total_ms * 1e6),
             "duration_ms": total_ms,
             "status_code": "OK",
             "attributes": {
@@ -111,8 +124,10 @@ class VoicePipelineService:
                 "voice_timbre": norm_timbre,
                 "relay_pause_ms": relay_pause_ms,
                 "sla_target_ms": 3000,
-                "sla_compliant": True,
-                "hardware_tier": "ARM64_TABLET_2GB"
+                "sla_compliant": total_ms <= 3000,
+                "hardware_tier": "ARM64_TABLET_2GB",
+                "budget_source": "EDGE_HARDWARE_BENCHMARK",
+                "is_estimated_budget": True
             }
         }
         

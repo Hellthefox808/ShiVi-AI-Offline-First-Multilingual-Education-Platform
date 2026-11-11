@@ -454,96 +454,65 @@ export default function WebPage() {
     <div className="space-y-8">
       {/* Top Banner Navigation */}
       <nav aria-label="Main Navigation" className="glass-card rounded-2xl p-2.5 flex flex-wrap gap-2 items-center justify-between shadow-2xl">
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            onClick={() => setActiveTab('studio')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'studio'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 text-emerald-400" />
-            <span>Lesson Studio (शिक्षण स्टूडियो)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('voice')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'voice'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <Mic className="w-4 h-4 text-emerald-400" />
-            <span>Live Voice Dialogue (ध्वनि संवाद)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('curriculum')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'curriculum'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-emerald-400" />
-            <span>Curriculum & Content (पाठ्यक्रम)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('sync')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'sync'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <Radio className="w-4 h-4 text-emerald-400" />
-            <span>Offline Sync & Outbox</span>
-            {pendingOutboxCount > 0 ? (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold animate-pulse">
-                {pendingOutboxCount}
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
-                Synced
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'analytics'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4 text-emerald-400" />
-            <span>District Telemetry (डेटा एनालिटिक्स)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('arch')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'arch'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <Cpu className="w-4 h-4 text-emerald-400" />
-            <span>Full-Stack Blueprint (वास्तुकला)</span>
-          </button>
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="BhashaSetu AI workspaces">
+          {([
+            { id: 'studio', label: 'Lesson Studio (शिक्षण स्टूडियो)', Icon: BookOpen },
+            { id: 'voice', label: 'Live Voice Dialogue (ध्वनि संवाद)', Icon: Mic },
+            { id: 'curriculum', label: 'Curriculum & Content (पाठ्यक्रम)', Icon: Layers },
+            { id: 'sync', label: 'Offline Sync & Outbox', Icon: Radio },
+            { id: 'analytics', label: 'District Telemetry (डेटा एनालिटिक्स)', Icon: BarChart3 },
+            { id: 'arch', label: 'Full-Stack Blueprint (वास्तुकला)', Icon: Cpu },
+          ] as const).map(({ id, label, Icon }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                role="tab"
+                id={`tab-${id}`}
+                aria-selected={isActive}
+                aria-controls={`panel-${id}`}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(id)}
+                className={`min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                <Icon className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+                <span>{label}</span>
+                {id === 'sync' &&
+                  (pendingOutboxCount > 0 ? (
+                    <span
+                      className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold animate-pulse"
+                      aria-label={`${pendingOutboxCount} operations pending sync`}
+                    >
+                      {pendingOutboxCount}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                      Synced
+                    </span>
+                  ))}
+              </button>
+            );
+          })}
         </div>
 
         {/* Global Connection Badge */}
         <div className="flex items-center space-x-2.5 px-3.5 py-1.5 glass-pill rounded-xl text-xs">
           {isOnline ? (
-            <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" aria-hidden="true" />
           ) : (
-            <WifiOff className="w-3.5 h-3.5 text-amber-400" />
+            <WifiOff className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
           )}
-          <span className="font-bold text-slate-200 text-xs">
+          <span className="font-bold text-slate-200 text-xs" role="status" aria-live="polite">
             {isOnline ? 'Cloud Synchronized' : 'Offline Tablet Mode'}
           </span>
           <button
             onClick={() => setIsOnline(!isOnline)}
+            aria-pressed={!isOnline}
+            aria-label={isOnline ? 'Switch to offline tablet mode' : 'Switch to cloud synchronized mode'}
             className="text-[10px] font-extrabold text-emerald-400 hover:text-emerald-300 ml-1 px-2 py-1 rounded bg-white/5 border border-white/10 cursor-pointer transition-colors"
           >
             Switch
@@ -565,7 +534,13 @@ export default function WebPage() {
       {/* TAB 1: TEACHER LESSON STUDIO */}
       {/* ========================================================= */}
       {activeTab === 'studio' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div
+          role="tabpanel"
+          id="panel-studio"
+          aria-labelledby="tab-studio"
+          tabIndex={0}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+        >
           {/* Left Column: Lesson Generation Inputs */}
           <div className="lg:col-span-5 glass-card p-6 md:p-8 rounded-3xl border border-white/10 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -786,7 +761,13 @@ export default function WebPage() {
       {/* TAB 2: LIVE VOICE DIALOGUE SIMULATOR */}
       {/* ========================================================= */}
       {activeTab === 'voice' && (
-        <div className="glass-card p-6 md:p-10 rounded-3xl border border-white/10 shadow-2xl space-y-8">
+        <div
+          role="tabpanel"
+          id="panel-voice"
+          aria-labelledby="tab-voice"
+          tabIndex={0}
+          className="glass-card p-6 md:p-10 rounded-3xl border border-white/10 shadow-2xl space-y-8"
+        >
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
             <div>
               <h3 className="text-2xl font-extrabold text-white flex items-center gap-3 font-display">

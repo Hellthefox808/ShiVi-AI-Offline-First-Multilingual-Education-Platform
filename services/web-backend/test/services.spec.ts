@@ -70,14 +70,39 @@ describe('BhashaSetu Web Backend Domain Services', () => {
     });
 
     it('should approve a lesson and update status to APPROVED', () => {
-      const approved = lessonsService.approve('LES-001');
+      // LES-001 seeds as PUBLISHED, and the lifecycle state machine now correctly
+      // forbids PUBLISHED -> APPROVED. Drive a real draft through review instead.
+      const draft = lessonsService.create({
+        title: 'समीक्षा हेतु पाठ',
+        hindiPrompt: 'बच्चों, आज हम पानी के बारे में सीखेंगे।',
+        targetLanguage: 'SANTHALI',
+      });
+      assert.equal(draft.status, 'REVIEW_REQUIRED');
+
+      const approved = lessonsService.approve(draft.id);
       assert.equal(approved.status, 'APPROVED');
       assert.equal(approved.isApprovedByTeacher, true);
     });
 
     it('should publish an approved lesson and queue for offline distribution', () => {
-      const published = lessonsService.publish('LES-001');
+      const draft = lessonsService.create({
+        title: 'प्रकाशन हेतु पाठ',
+        hindiPrompt: 'बच्चों, आज हम पेड़ों के बारे में सीखेंगे।',
+        targetLanguage: 'SANTHALI',
+      });
+      lessonsService.approve(draft.id);
+
+      const published = lessonsService.publish(draft.id);
       assert.equal(published.status, 'PUBLISHED');
+    });
+
+    it('should reject publishing a lesson that no teacher has approved', () => {
+      const draft = lessonsService.create({
+        title: 'अस्वीकृत पाठ',
+        hindiPrompt: 'परीक्षण',
+        targetLanguage: 'HO',
+      });
+      assert.throws(() => lessonsService.publish(draft.id), /has not been approved by a teacher/);
     });
 
     it('should generate printable bilingual worksheets and flashcards', () => {

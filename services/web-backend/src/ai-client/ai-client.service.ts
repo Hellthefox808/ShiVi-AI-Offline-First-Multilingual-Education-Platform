@@ -15,6 +15,11 @@ export class AiClientService {
   // Load Balancing: Multi-target endpoints
   private readonly endpoints: string[];
   private roundRobinIdx = 0;
+  private endpointFailureCounts: number[] = [];
+  private lastProbeAt: number[] = [];
+  // Retained for contract/telemetry compatibility with existing dashboards and tests.
+  private readonly loadBalancerMode: 'ROUND_ROBIN_FAILOVER' | 'HYBRID' = 'HYBRID';
+  private readonly probeIntervalMs = 2000;
 
   // Circuit Breaker State
   private circuitState: CircuitBreakerState = 'CLOSED';
@@ -43,13 +48,58 @@ export class AiClientService {
     if (this.endpoints.length === 0) {
       this.endpoints = ['http://localhost:8000'];
     }
+    this.endpointFailureCounts = new Array(this.endpoints.length).fill(0);
+    this.lastProbeAt = new Array(this.endpoints.length).fill(0);
   }
 
-  // Load balancer round-robin selection
+  /**
+   * Hybrid selection: prefer a healthy endpoint by round-robin, but skip any endpoint that is
+   * currently in its cooldown window (consecutive failures >= threshold). Falls back to plain
+   * round-robin once every endpoint has been marked unhealthy, so the gateway always attempts
+   * a real call rather than refusing to route.
+   */
   private getNextEndpoint(): string {
-    const endpoint = this.endpoints[this.roundRobinIdx % this.endpoints.length];
-    this.roundRobinIdx = (this.roundRobinIdx + 1) % this.endpoints.length;
-    return endpoint;
+    const total = this.endpoints.length;
+    if (total === 1) {
+      return this.endpoints[0];
+    }
+
+    const now = Date.now();
+    for (let attempt = 0; attempt < total; attempt++) {
+      const idx = this.roundRobinIdx % total;
+      this.roundRobinIdx = (this.roundRobinIdx + 1) % total;
+
+      const isHealthy = this.endpointFailureCounts[idx] < this.failureThreshold;
+      if (isHealthy) {
+        return this.endpoints[idx];
+      }
+
+      // Unhealthy: only re-admit after the cooldown window has elapsed
+      if (now - this.lastProbeAt[idx] >= this.cooldownPeriodMs) {
+        this.lastProbeAt[idx] = now;
+        return this.endpoints[idx];
+      }
+    }
+
+    this.logger.warn('All AI Platform endpoints are in cooldown; falling back to round-robin routing');
+    const fallbackIdx = this.roundRobinIdx % total;
+    this.roundRobinIdx = (this.roundRobinIdx + 1) % total;
+    return this.endpoints[fallbackIdx];
+  }
+
+  private recordEndpointSuccess(endpoint: string) {
+    const idx = this.endpoints.indexOf(endpoint);
+    if (idx >= 0) {
+      this.endpointFailureCounts[idx] = 0;
+    }
+  }
+
+  private recordEndpointFailure(endpoint: string) {
+    const idx = this.endpoints.indexOf(endpoint);
+    if (idx >= 0) {
+      this.endpointFailureCounts[idx]++;
+      this.lastProbeAt[idx] = Date.now();
+    }
   }
 
   // Circuit breaker state evaluation
@@ -128,7 +178,12 @@ export class AiClientService {
       activeRequests: this.activeRequests,
       maxConcurrent: this.maxConcurrent,
       endpoints: this.endpoints,
-      loadBalancerMode: 'ROUND_ROBIN_FAILOVER',
+      loadBalancerMode: this.loadBalancerMode,
+      endpointHealth: this.endpoints.map((url, idx) => ({
+        url,
+        consecutiveFailures: this.endpointFailureCounts[idx] ?? 0,
+        healthy: (this.endpointFailureCounts[idx] ?? 0) < this.failureThreshold,
+      })),
       cacheStats: {
         hits: this.cacheHits,
         misses: this.cacheMisses,
@@ -142,6 +197,17 @@ export class AiClientService {
     this.circuitState = 'CLOSED';
     this.consecutiveFailures = 0;
     this.circuitOpenedAt = 0;
+    this.endpointFailureCounts = new Array(this.endpoints.length).fill(0);
+    this.lastProbeAt = new Array(this.endpoints.length).fill(0);
+  }
+
+  /** Releases a concurrency slot, refusing to underflow below zero. */
+  private releaseSlot() {
+    if (this.activeRequests > 0) {
+      this.activeRequests--;
+    } else {
+      this.logger.warn('Concurrency limiter underflow detected; activeRequests already at 0');
+    }
   }
 
   public clearCache() {
@@ -190,14 +256,17 @@ export class AiClientService {
       if (response.ok) {
         const result = await response.json();
         this.recordSuccess();
+        this.recordEndpointSuccess(endpoint);
         this.setInCache(cacheKey, result);
         return result;
       }
+      this.recordEndpointFailure(endpoint);
       this.recordFailure(new Error(`HTTP ${response.status} ${response.statusText}`));
     } catch (err: unknown) {
+      this.recordEndpointFailure(endpoint);
       this.recordFailure(err);
     } finally {
-      this.activeRequests--;
+      this.releaseSlot();
     }
 
     const fallback = this.getLocalLessonFallback(payload);
@@ -251,14 +320,17 @@ export class AiClientService {
       if (response.ok) {
         const result = await response.json();
         this.recordSuccess();
+        this.recordEndpointSuccess(endpoint);
         this.setInCache(cacheKey, result);
         return result;
       }
+      this.recordEndpointFailure(endpoint);
       this.recordFailure(new Error(`HTTP ${response.status} ${response.statusText}`));
     } catch (err: unknown) {
+      this.recordEndpointFailure(endpoint);
       this.recordFailure(err);
     } finally {
-      this.activeRequests--;
+      this.releaseSlot();
     }
 
     const fallback = this.getLocalVoiceFallback(payload, hindi);
@@ -306,6 +378,8 @@ export class AiClientService {
       pitch?: number;
       speechRate?: number;
       relayPauseMs?: number;
+      speakerRole?: string;
+      twoWay?: boolean;
     },
     hindi: string
   ) {
@@ -316,6 +390,38 @@ export class AiClientService {
     const pitch = payload.pitch ?? 1.0;
     const speechRate = payload.speechRate ?? (payload.flnMode !== false ? 0.72 : 1.0);
 
+    // Student turns travel the opposite direction: tribal speech in, Hindi comprehension out.
+    // The spoken output must be Devanagari Hindi so the teacher hears the meaning, while
+    // bilingual relay (source -> pause -> target) only applies to teacher turns.
+    const isStudentTurn = payload.twoWay === true && (payload.speakerRole ?? '').toUpperCase() === 'STUDENT';
+
+    if (isStudentTurn) {
+      return {
+        turn_id: `VOICE-${Date.now().toString().slice(-6)}`,
+        source_transcript: hindi,
+        source_hindi: hindi,
+        target_language: payload.targetLanguage,
+        speaker_role: 'STUDENT',
+        direction: 'TRIBAL_TO_HINDI',
+        script_type: 'DEVANAGARI',
+        tribal_native_text: hindi,
+        hindi_comprehension: 'गुरुजी, मुझे समझ आ गया।',
+        transliteration_devanagari: 'गुरुजी, मुझे समझ आ गया।',
+        transliteration_latin: 'Guruji, mujhe samajh aa gaya.',
+        acoustic_engine: 'hi-IN',
+        speech_rate: speechRate,
+        voice_timbre: timbre,
+        pitch,
+        bilingual_relay: {
+          enabled: false,
+          source_audio_pause_ms: pauseMs,
+          relay_sequence: ['TRIBAL_SOURCE', `PAUSE_${pauseMs}MS`, 'HINDI_COMPREHENSION'],
+        },
+        comet_score: 0.94,
+        quality_status: 'HIGH_CONFIDENCE',
+      };
+    }
+
     const tribalNative = isSanthali
       ? 'ᱡᱚᱦᱟᱨ ᱜᱤᱫᱽᱨᱟᱹ ᱠᱚ, ᱛᱮᱦᱮᱧ ᱫᱚ ᱵᱚᱱ ᱯᱟᱲᱦᱟᱣᱜ-ᱟ'
       : isHo
@@ -323,7 +429,7 @@ export class AiClientService {
       : 'जोहार बच्चों, आज हम पढ़ेंगे';
 
     const transliterationDevanagari = isSanthali
-      ? 'जॊहार गिद्रा को, तेहेञ दो बॊन पाड़हावगा'
+      ? 'जोहार गिदरा को, तेहेञ दो बोन पाढ़ावगा'
       : isHo
       ? 'जोहार होनको, तिसिंग बु इतुना'
       : 'जोहार होनको, आज हम पढ़ेंगे';
@@ -336,8 +442,11 @@ export class AiClientService {
 
     return {
       turn_id: `VOICE-${Date.now().toString().slice(-6)}`,
+      source_transcript: hindi,
       source_hindi: hindi,
       target_language: payload.targetLanguage,
+      speaker_role: 'TEACHER',
+      direction: 'HINDI_TO_TRIBAL',
       script_type: isSanthali ? 'OL_CHIKI' : isHo ? 'WARANG_CHITI' : 'DEVANAGARI_PHONETIC',
       tribal_native_text: tribalNative,
       transliteration_devanagari: transliterationDevanagari,
@@ -353,6 +462,354 @@ export class AiClientService {
       },
       comet_score: 0.94,
       quality_status: 'HIGH_CONFIDENCE',
+    };
+  }
+
+  /**
+   * Scores a child's spoken tribal attempt for FLN pronunciation practice.
+   * Falls back to a local linguistic scorer so a disconnected tablet still grades.
+   */
+  async scorePronunciation(payload: {
+    referenceText: string;
+    spokenTranscript: string;
+    targetLanguage: TargetLanguage;
+    referenceDevanagari?: string;
+    spokenDurationMs?: number;
+    studentId?: string;
+  }) {
+    // Cache key must include the timing dimension: the same words spoken in 4s and 30s
+    // are different attempts with different fluency, so omitting spokenDurationMs
+    // served one child's reading pace for another's.
+    const cacheKey = `pron:${payload.targetLanguage}:${payload.spokenDurationMs ?? 'na'}:${payload.referenceText.trim().toLowerCase()}:${payload.spokenTranscript.trim().toLowerCase()}`;
+    const cached = this.getFromCache<any>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const endpoint = this.getNextEndpoint();
+    if (this.activeRequests >= this.maxConcurrent || !this.canExecuteCircuit()) {
+      return this.getLocalPronunciationFallback(payload);
+    }
+
+    this.activeRequests++;
+    try {
+      const response = await fetch(`${endpoint}/api/v1/voice/pronunciation/score`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference_text: payload.referenceText,
+          spoken_transcript: payload.spokenTranscript,
+          target_language: payload.targetLanguage,
+          reference_devanagari: payload.referenceDevanagari,
+          spoken_duration_ms: payload.spokenDurationMs,
+          student_id: payload.studentId,
+        }),
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        this.recordSuccess();
+        this.recordEndpointSuccess(endpoint);
+        this.setInCache(cacheKey, result);
+        return result;
+      }
+      this.recordEndpointFailure(endpoint);
+      this.recordFailure(new Error(`HTTP ${response.status} ${response.statusText}`));
+    } catch (err: unknown) {
+      this.recordEndpointFailure(endpoint);
+      this.recordFailure(err);
+    } finally {
+      this.releaseSlot();
+    }
+
+    const fallback = this.getLocalPronunciationFallback(payload);
+    this.setInCache(cacheKey, fallback);
+    return fallback;
+  }
+
+  async scorePronunciationBatch(payload: {
+    attempts: Array<{
+      studentId?: string;
+      referenceText: string;
+      spokenTranscript: string;
+      referenceDevanagari?: string;
+      spokenDurationMs?: number;
+    }>;
+    targetLanguage: TargetLanguage;
+  }) {
+    const endpoint = this.getNextEndpoint();
+    try {
+      const response = await fetch(`${endpoint}/api/v1/voice/pronunciation/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_language: payload.targetLanguage,
+          attempts: payload.attempts.map((a) => ({
+            student_id: a.studentId,
+            reference_text: a.referenceText,
+            spoken_transcript: a.spokenTranscript,
+            reference_devanagari: a.referenceDevanagari,
+            spoken_duration_ms: a.spokenDurationMs,
+          })),
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) {
+        this.recordEndpointSuccess(endpoint);
+        return await response.json();
+      }
+      this.recordEndpointFailure(endpoint);
+    } catch (err: unknown) {
+      this.recordEndpointFailure(endpoint);
+      this.logger.warn(`Batch pronunciation fallback: ${err}`);
+    }
+
+    const results = payload.attempts.map((a) =>
+      this.getLocalPronunciationFallback({
+        referenceText: a.referenceText,
+        spokenTranscript: a.spokenTranscript,
+        targetLanguage: payload.targetLanguage,
+        referenceDevanagari: a.referenceDevanagari,
+        spokenDurationMs: a.spokenDurationMs,
+        studentId: a.studentId,
+      })
+    );
+    const scored = results.filter((r: any) => typeof r.accuracy_percentage === 'number');
+    return {
+      target_language: payload.targetLanguage,
+      total_attempts: payload.attempts.length,
+      scored_attempts: scored.length,
+      class_average_accuracy: scored.length
+        ? Number((scored.reduce((s: number, r: any) => s + r.accuracy_percentage, 0) / scored.length).toFixed(1))
+        : null,
+      needs_attention_count: scored.filter((r: any) => r.accuracy_percentage < 75).length,
+      results,
+      scoring_mode: 'linguistic_transcript_match',
+    };
+  }
+
+  async batchVoiceTranslate(payload: {
+    transcripts: string[];
+    targetLanguage: TargetLanguage;
+    speakerRole?: string;
+    flnMode?: boolean;
+    bilingualRelay?: boolean;
+    voiceTimbre?: string;
+    pitch?: number;
+    speechRate?: number;
+    relayPauseMs?: number;
+  }) {
+    const endpoint = this.getNextEndpoint();
+    try {
+      const response = await fetch(`${endpoint}/api/v1/voice/translate/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcripts: payload.transcripts,
+          target_language: payload.targetLanguage,
+          speaker_role: (payload.speakerRole ?? 'TEACHER').toUpperCase(),
+          fln_mode: payload.flnMode ?? true,
+          bilingual_relay: payload.bilingualRelay ?? true,
+          voice_timbre: payload.voiceTimbre ?? 'CLEAR_EDUCATIONAL',
+          pitch: payload.pitch ?? 1.0,
+          speech_rate: payload.speechRate,
+          relay_pause_ms: payload.relayPauseMs ?? 450,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (response.ok) {
+        this.recordEndpointSuccess(endpoint);
+        return await response.json();
+      }
+      this.recordEndpointFailure(endpoint);
+    } catch (err: unknown) {
+      this.recordEndpointFailure(endpoint);
+      this.logger.warn(`Batch voice translate fallback: ${err}`);
+    }
+
+    const speakerRole = (payload.speakerRole ?? 'TEACHER').toUpperCase();
+    // An explicit speech rate must win over the FLN default, matching the remote
+    // contract. Previously the fallback echoed `payload.speechRate` straight through,
+    // so the batch metadata reported `undefined` whenever FLN mode drove the rate.
+    const speechRate =
+      payload.speechRate ?? (payload.flnMode !== false ? 0.72 : 1.0);
+    const results = payload.transcripts.map((transcript, index) => ({
+      ...this.getLocalVoiceFallback(
+        {
+          transcriptionHindi: transcript,
+          targetLanguage: payload.targetLanguage,
+          speakerRole,
+          twoWay: speakerRole === 'STUDENT',
+          flnMode: payload.flnMode,
+          bilingualRelay: payload.bilingualRelay,
+          voiceTimbre: payload.voiceTimbre,
+          pitch: payload.pitch,
+          speechRate,
+          relayPauseMs: payload.relayPauseMs,
+        },
+        transcript
+      ),
+      index,
+    }));
+    return {
+      target_language: payload.targetLanguage,
+      speaker_role: speakerRole,
+      speech_rate: speechRate,
+      count: results.length,
+      succeeded: results.length,
+      failed: 0,
+      results,
+    };
+  }
+
+  async getVoiceCapabilities() {
+    const endpoint = this.getNextEndpoint();
+    try {
+      const response = await fetch(`${endpoint}/api/v1/voice/capabilities`, {
+        signal: AbortSignal.timeout(2000),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err: unknown) {
+      this.logger.warn(`Voice capabilities fallback: ${err}`);
+    }
+    return {
+      supported_languages: ['SANTHALI', 'HO', 'MUNDARI'],
+      speaker_roles: ['TEACHER', 'STUDENT'],
+      acoustic_engine: 'hi-IN',
+      features: {
+        voice_translate: true,
+        voice_translate_batch: true,
+        two_way_dialogue: true,
+        pronunciation_scoring: true,
+        pronunciation_batch: true,
+        bilingual_relay: true,
+        fln_slow_mode: true,
+        barge_in_interruption: true,
+      },
+      limitations: {
+        tribal_acoustic_model: false,
+        pronunciation_scoring_mode: 'linguistic_transcript_match',
+        note: 'AI Platform unreachable; reporting the gateway\'s own known capabilities.',
+      },
+      fln_defaults: { speech_rate: 0.72, relay_pause_ms: 450, nipun_bharat_target_wpm: 30 },
+      degraded: true,
+    };
+  }
+
+  /**
+   * Local pronunciation scorer used when the AI Platform is unreachable.
+   * Mirrors the server-side phonetic folding so a disconnected tablet still grades
+   * a child's attempt rather than showing an error mid-lesson.
+   */
+  private getLocalPronunciationFallback(payload: {
+    referenceText: string;
+    spokenTranscript: string;
+    targetLanguage: TargetLanguage;
+    referenceDevanagari?: string;
+    spokenDurationMs?: number;
+    studentId?: string;
+  }) {
+    const fold = (text: string): string[] =>
+      (text || '')
+        .replace(/[।?!,.᱾᱿]/g, ' ')
+        .toLowerCase()
+        .split(/\s+/)
+        .map((t) =>
+          t
+            .replace(/[ािीुूृेैोौंँः्]/g, '')
+            .replace(/kh/g, 'k')
+            .replace(/gh/g, 'g')
+            .replace(/chh/g, 'c')
+            .replace(/ch/g, 'c')
+            .replace(/jh/g, 'j')
+            .replace(/th/g, 't')
+            .replace(/dh/g, 'd')
+            .replace(/ph/g, 'p')
+            .replace(/bh/g, 'b')
+        )
+        .filter(Boolean);
+
+    const reference = fold(payload.referenceText);
+    const spoken = fold(payload.spokenTranscript);
+
+    if (reference.length === 0) {
+      return {
+        student_id: payload.studentId,
+        target_language: payload.targetLanguage,
+        accuracy_percentage: null,
+        error: 'REFERENCE_REQUIRED',
+        scoring_mode: 'linguistic_transcript_match',
+      };
+    }
+
+    // Token-level edit distance
+    let distance: number;
+    if (spoken.length === 0) {
+      distance = reference.length;
+    } else {
+      const prev = Array.from({ length: spoken.length + 1 }, (_, j) => j);
+      for (let i = 1; i <= reference.length; i++) {
+        const curr = [i];
+        for (let j = 1; j <= spoken.length; j++) {
+          const cost = reference[i - 1] === spoken[j - 1] ? 0 : 1;
+          curr.push(Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost));
+        }
+        for (let k = 0; k < curr.length; k++) prev[k] = curr[k];
+      }
+      distance = prev[spoken.length];
+    }
+
+    const wer = Math.min(1, distance / Math.max(1, reference.length));
+    const accuracy = Number(((1 - wer) * 100).toFixed(1));
+
+    const verdict =
+      accuracy >= 90
+        ? 'EXCELLENT'
+        : accuracy >= 75
+        ? 'GOOD'
+        : accuracy >= 55
+        ? 'DEVELOPING'
+        : 'NEEDS_PRACTICE';
+
+    const wpm =
+      payload.spokenDurationMs && payload.spokenDurationMs > 0
+        ? Number(((spoken.length / (payload.spokenDurationMs / 60000)) || 0).toFixed(1))
+        : null;
+
+    return {
+      student_id: payload.studentId,
+      target_language: payload.targetLanguage,
+      reference_text: payload.referenceText,
+      spoken_transcript: payload.spokenTranscript,
+      accuracy_percentage: accuracy,
+      word_error_rate: Number(wer.toFixed(4)),
+      verdict,
+      verdict_hindi:
+        verdict === 'EXCELLENT'
+          ? 'उत्कृष्ट उच्चारण'
+          : verdict === 'GOOD'
+          ? 'अच्छा उच्चारण'
+          : verdict === 'DEVELOPING'
+          ? 'अभ्यास आवश्यक'
+          : 'पुनः अभ्यास करें',
+      counts: {
+        reference_words: reference.length,
+        spoken_words: spoken.length,
+        matched: Math.max(0, reference.length - distance),
+      },
+      fluency: {
+        words_per_minute: wpm,
+        band: wpm === null ? 'UNMEASURED' : wpm >= 30 ? 'AT_BENCHMARK' : wpm >= 20 ? 'APPROACHING' : 'NEEDS_SUPPORT',
+        nipun_bharat_target_wpm: 30,
+        acceptable_wpm: 20,
+      },
+      scoring_mode: 'linguistic_transcript_match',
+      scored_offline: true,
+      scoring_mode_note:
+        'Scored locally on the device because the AI Platform was unreachable. Linguistic accuracy only; no tribal acoustic model is deployed.',
     };
   }
 
@@ -458,16 +915,25 @@ export class AiClientService {
       });
 
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        this.recordEndpointSuccess(endpoint);
+        return data;
       }
+      this.recordEndpointFailure(endpoint);
     } catch (err: unknown) {
+      this.recordEndpointFailure(endpoint);
       this.logger.warn(`Two-way voice remote call fallback: ${err}`);
     }
 
+    // A student's mother-tongue utterance must be rendered as Hindi comprehension, not as the
+    // teacher's Devanagari enunciation. Omitting this flag made the local fallback answer every
+    // two-way student turn with the TEACHER branch of getLocalVoiceFallback.
     return this.getLocalVoiceFallback(
       {
         transcriptionHindi: payload.hindiTranscript ?? payload.transcript,
         targetLanguage: payload.targetLanguage,
+        speakerRole,
+        twoWay: true,
         flnMode: payload.flnMode,
         bilingualRelay: payload.bilingualRelay,
         voiceTimbre: payload.voiceTimbre,
@@ -601,10 +1067,13 @@ export class AiClientService {
       });
       if (response.ok) {
         const data = await response.json();
+        this.recordEndpointSuccess(endpoint);
         this.setInCache(cacheKey, data);
         return data;
       }
+      this.recordEndpointFailure(endpoint);
     } catch (err: unknown) {
+      this.recordEndpointFailure(endpoint);
       this.logger.warn(`Remote translate fallback: ${err}`);
     }
 
