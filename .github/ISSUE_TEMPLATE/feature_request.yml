@@ -1,0 +1,39 @@
+name: 💡 Feature Request
+description: Propose a new capability or architectural enhancement
+labels: ["enhancement", "feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome proposals to advance mother-tongue education, speech synthesis, and offline-first classroom capabilities.
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: Target Subsystem
+      options:
+        - "Android Application"
+        - "Web Backend Gateway"
+        - "AI Platform & Models"
+        - "Web Frontend Studio"
+        - "Infrastructure & Deployment"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Educational Need
+      description: What challenge or user need does this feature address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution & Pedagogical Alignment
+      description: Describe your proposed design and how it fits into BhashaSetu's invariants.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative implementations or existing patterns explored.

@@ -1,0 +1,53 @@
+name: 🐛 Bug Report
+description: Create a report to help us fix defects or unexpected behavior
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue in BhashaSetu AI! Please provide detailed information so we can reproduce and resolve it.
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: Subsystem Affected
+      description: Select the primary subsystem where the issue occurs
+      options:
+        - "Android Application (app/)"
+        - "Web Backend Gateway (services/web-backend/)"
+        - "AI Platform & RAG (services/ai-platform/)"
+        - "Web Frontend (apps/web-frontend/)"
+        - "Shared Contracts (packages/contracts/)"
+        - "Infrastructure & Docker/K8s (infra/)"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: A clear and concise description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the issue.
+      placeholder: |
+        1. Navigate to '...'
+        2. Execute '...'
+        3. Observe error '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen under correct operation.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs or Error Output
+      description: Paste any stack traces or terminal outputs here.
+      render: shell

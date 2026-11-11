@@ -35,15 +35,13 @@ ENV/
 .coverage
 htmlcov/
 
-# AI Assistant & IDE / Agent files
+# Internal Agent, Assistant & Local IDE files
+.agents/
+.kilo/
+AGENTS.md
 CLAUDE.md
 .claude/
 .jolli/
-.agents/*
-!.agents/memory/
-!.agents/skills/
-!.agents/rules/
-!.agents/mcp/
 .gemini/
 .system_generated/
 .codelens/
@@ -60,6 +58,7 @@ CLAUDE.md
 .windsurfrules
 .nex/
 .kombai/
+temp_*/
 
 # Environment & Secrets
 .env
@@ -76,4 +75,3 @@ Thumbs.db
 logs/
 *.tmp
 *.bak
-temp_*/

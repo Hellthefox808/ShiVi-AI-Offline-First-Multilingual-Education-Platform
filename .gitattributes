@@ -1,0 +1,50 @@
+# Auto-detect text files and normalize line endings to LF on commit
+* text=auto eol=lf
+
+# Explicit text files
+*.md text
+*.txt text
+*.json text
+*.yaml text
+*.yml text
+*.toml text
+*.html text
+*.css text
+*.scss text
+*.js text
+*.ts text
+*.tsx text
+*.jsx text
+*.py text
+*.kt text
+*.java text
+*.gradle text
+*.kts text
+*.properties text
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files - prevent Git from attempting to merge or normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.tar.gz binary
+*.zip binary
+*.apk binary
+*.aab binary
+*.jar binary
+*.so binary
+*.keystore binary
+*.jks binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+
+# GitHub Linguist overrides
+app/src/main/res/* linguist-vendored=false
